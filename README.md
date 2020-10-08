@@ -5,15 +5,25 @@ I added some small exmaples and a "translator" for the Lazy-Foo - SDL-Tutorials 
 
 Mac users must download and install the sdl-framework:
 download *.dmg from this files
+
 		https://www.libsdl.org/download-2.0.php#source
+		
 		https://www.libsdl.org/projects/SDL_image/
+		
 		https://www.libsdl.org/projects/SDL_mixer/
+		
 		https://www.libsdl.org/projects/SDL_net/
+		
 		https://www.libsdl.org/projects/SDL_rtf/
+		
 		https://www.libsdl.org/projects/SDL_ttf/
+		
 	open the *.dmg
+	
 	copy "sdl*.frameworks" to /Library/Frameworks/
+	
 	more infos for example here: https://lazyfoo.net/tutorials/SDL/01_hello_SDL/mac/index.php
+	
 
 Sorry, I don't have any experience with linux, but it should easy to add support for it. When somebody has done it, I will add this to the package.
 

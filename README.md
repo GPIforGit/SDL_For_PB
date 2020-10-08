@@ -1,5 +1,3 @@
-hi,
-
 I have translated the c-header from the complete SDL - package for Pure Basic. 
 I added some small exmaples and a "translator" for the Lazy-Foo - SDL-Tutorials  https://lazyfoo.net/tutorials/SDL/ (please read the readme!).
 
@@ -37,6 +35,6 @@ How to start.
 Simple xincludefile "sdl2\sdl.pbi" and the basic-sdl should work. Important, all functions are in a module. Instead of SDL_INIT(#SDL_INIT_VIDEO) write SDL::INIT(SDL::#INIT_VIDEO). For mixer include "sdl2\SDL_image.pbi" before the "sdl2\SDL.pbi". More infos in the SDL.pbi.
 
 IMPORTANT:
-Das ist die erste Funktion. And SDL is big, so maybe there are some bugs.
+This is the first version. And SDL is big, so maybe there are some bugs.
 
 https://github.com/GPIforGit/SDL_For_PB/releases

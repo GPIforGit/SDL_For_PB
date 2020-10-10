@@ -53,6 +53,8 @@ Interface Renderer Extends _baseclass
   Present()
   Show()
   
+  GetWastedMS.q()
+  
   SetFrameRate(hz.l)
     
   SetLogicalSize.l(w.l, h.l, quality=0)
@@ -87,6 +89,7 @@ Structure sRenderer Extends _sbaseclass
   TargetFPS.l
   TargetFPSms.d
   
+  wastedMS.q
   
   winState.l
   winMouse.l
@@ -146,7 +149,7 @@ Procedure Renderer__DelTextureList(*self.sRenderer,*tex.sTexture)
 
 EndProcedure
   
-class Procedure.l Texture__new(*self.sTexture, *render,*texture)
+class Procedure.l Texture_Texture(*self.sTexture, *render,*texture)
   If *texture = #Null
     ProcedureReturn #False
   EndIf
@@ -630,6 +633,7 @@ class Procedure.l Renderer_Show(*self.sRenderer)
   Static.l TargetFPSTimerINT=0
   Protected.l ret
   Protected.l delay
+  Protected.q wastedTimer=ElapsedMilliseconds()
   
   If *self\TargetFPS=0
     TargetFPSTimer=-1
@@ -646,7 +650,7 @@ class Procedure.l Renderer_Show(*self.sRenderer)
   
   ;sdl - switch picture
   SDL::RenderPresent(*self\renderer)
-
+  *self\wastedMS = ElapsedMilliseconds()-wastedTimer  
   
   ;calculate needed time for the last frame
   If frameInMs
@@ -669,6 +673,10 @@ class Procedure.l Renderer_Show(*self.sRenderer)
   EndIf
     
   ProcedureReturn ret
+EndProcedure
+
+class Procedure.q Renderer_GetWastedMS(*self.sRenderer)
+  ProcedureReturn *self\wastedMS
 EndProcedure
 
 class Procedure.l Renderer_DrawLine(*self.sRenderer,x1.l,y1.l,x2.l,y2.l)
@@ -750,10 +758,7 @@ class Procedure.l Renderer_SetLogicalSize(*self.sRenderer, w.l, h.l, quality=0)
     sdl::DestroyTexture(*self\targetTexture)
     *self\targetTexture=#Null
   EndIf
-  
-  ;-
-  ;- quality ist hier unsinn, da sich die Größe ändern kann!
-  ;-
+
   If w>0 And h>0
     Protected.s old = SDL::GetHint( SDL::#HINT_RENDER_SCALE_QUALITY )
     *self\targetW=w
@@ -810,6 +815,7 @@ EndProcedure
 
 
 ; IDE Options = PureBasic 5.72 (Windows - x64)
-; CursorPosition = 5
-; Folding = -BH4RVl-668
+; CursorPosition = 760
+; FirstLine = 562
+; Folding = -BH4RVl-6z4-
 ; EnableXP

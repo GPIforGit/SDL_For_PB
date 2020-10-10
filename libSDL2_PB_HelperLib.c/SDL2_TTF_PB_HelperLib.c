@@ -17,7 +17,7 @@ extern "C" {
 #define SDL_SCANF_VARARG_FUNC( fmtargnumber )
 
 typedef unsigned short Uint16;
-typedef unsigned long Uint32;
+typedef unsigned int Uint32;
 
 typedef struct SDL_Color
 {

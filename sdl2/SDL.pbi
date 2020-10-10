@@ -20,6 +20,7 @@
 ; ---------------------------------------------------------------------------
 ;
 ; Converted for PB 2020 by GPI
+;    Thanks to ccode_new for the linux-helper-lib
 ;
 ; ---------------------------------------------------------------------------
 ; Documentations:
@@ -42,6 +43,10 @@
 ;   #GL_STEREO_
 ;   #THREAD_PRIORITY_NORMAL_
 ;   #THREAD_PRIORITY_TIME_CRITICAL_
+;   #AUDIO_U16SYS_
+;   #AUDIO_S16SYS_
+;   #AUDIO_S32SYS_
+;   #AUDIO_F32SYS_
 ;
 ; Changes in SDL
 ;   Everything is in the modul SDL, so remove SDL_ and write SDL::
@@ -85,16 +90,17 @@ DeclareModule SDL
       #FuncPrefix="_"
       #libSDL2_PB_HelperLib_a="libSDL2_PB_HelperLibMAC.a"
       #libSDL2_TTF_PB_HelperLib_a="libSDL2_TTF_PB_HelperLibMAC.a"
-    CompilerDefault
-      CompilerError "Os is not supported!"
-      #SDL2_LIB=      "SDL2"
-      #SDL2_IMAGE_LIB="SDL2_image"
-      #SDL2_MIXER_LIB="SDL2_mixer"
-      #SDL2_TTF_LIB=  "SDL2_ttf"
-      #SDL2_NET_LIB=  "SDL2_net"
-      #FuncPrefix="_"
+    CompilerCase #PB_OS_Linux
+      #SDL2_LIB=      "-lSDL2"
+      #SDL2_IMAGE_LIB="-lSDL2_image"
+      #SDL2_MIXER_LIB="-lSDL2_mixer"
+      #SDL2_TTF_LIB=  "-lSDL2_ttf"
+      #SDL2_NET_LIB=  "-lSDL2_net"
+      #FuncPrefix=""
       #libSDL2_PB_HelperLib_a="libSDL2_PB_HelperLibLINUX.a"
       #libSDL2_TTF_PB_HelperLib_a="libSDL2_TTF_PB_HelperLibLINUX.a"
+    CompilerDefault
+      CompilerError "Os is not supported!"
   CompilerEndSelect
   CompilerIf #PB_Compiler_Processor <> #PB_Processor_x64
     CompilerError "Processor is not supported!"
@@ -306,7 +312,7 @@ Macro AssertionHandler: integer :EndMacro;AssertionHandler.enum( *data.AssertDat
 ImportC #SDL2_lib
   SetAssertionHandler.void(*handler.AssertionHandler, *userdata.pvoid) As #FuncPrefix + "SDL_SetAssertionHandler"
   GetDefaultAssertionHandler.r_AssertionHandler() As #FuncPrefix + "SDL_GetDefaultAssertionHandler"
-  GetAssertionHandler.r_AssertionHandler(*ppuserdata.pvoid);
+  GetAssertionHandler.r_AssertionHandler(*ppuserdata.pvoid) As #FuncPrefix + "SDL_GetAssertionHandler"
   GetAssertionReport.r_AssertData() As #FuncPrefix + "SDL_GetAssertionReport"
   ResetAssertionReport.void() As #FuncPrefix + "SDL_ResetAssertionReport"
   Macro TriggerBreakpoint() : CallDebugger : EndMacro
@@ -684,15 +690,15 @@ EndImport
 #AUDIO_F32MSB = $9120
 #AUDIO_F32 = #AUDIO_F32LSB
 CompilerIf #BYTEORDER = #LIL_ENDIAN
-  #AUDIO_U16SYS = #AUDIO_U16LSB
-  #AUDIO_S16SYS = #AUDIO_S16LSB
-  #AUDIO_S32SYS = #AUDIO_S32LSB
-  #AUDIO_F32SYS = #AUDIO_F32LSB
+  #AUDIO_U16SYS_ = #AUDIO_U16LSB
+  #AUDIO_S16SYS_ = #AUDIO_S16LSB
+  #AUDIO_S32SYS_ = #AUDIO_S32LSB
+  #AUDIO_F32SYS_ = #AUDIO_F32LSB
 CompilerElse
-  #AUDIO_U16SYS = #AUDIO_U16MSB
-  #AUDIO_S16SYS = #AUDIO_S16MSB
-  #AUDIO_S32SYS = #AUDIO_S32MSB
-  #AUDIO_F32SYS = #AUDIO_F32MSB
+  #AUDIO_U16SYS_ = #AUDIO_U16MSB
+  #AUDIO_S16SYS_ = #AUDIO_S16MSB
+  #AUDIO_S32SYS_ = #AUDIO_S32MSB
+  #AUDIO_F32SYS_ = #AUDIO_F32MSB
 CompilerEndIf
 #AUDIO_ALLOW_FREQUENCY_CHANGE = $00000001
 #AUDIO_ALLOW_FORMAT_CHANGE = $00000002
@@ -2225,7 +2231,7 @@ ImportC #SDL2_lib
   GameControllerFromPlayerIndex.r_GameController(player_index.int) As #FuncPrefix + "SDL_GameControllerFromPlayerIndex"
   _GameControllerName.r_ascii(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerName"
   Macro GameControllerName(gamec): SDL::_GetAscii(SDL::_GameControllerName(gamec)) :EndMacro
-  GameControllerGetType.enum(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetType"
+  ;GameControllerGetType.enum(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetType"
   GameControllerGetPlayerIndex.int(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetPlayerIndex"
   GameControllerSetPlayerIndex.void(*gamecontroller.GameController, player_index.int) As #FuncPrefix + "SDL_GameControllerSetPlayerIndex"
   GameControllerGetVendor.Uint16(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetVendor"
@@ -2243,7 +2249,7 @@ ImportC #SDL2_lib
   _GameControllerGetStringForButton.r_ascii(button.enum) As #FuncPrefix + "SDL_GameControllerGetStringForButton"
   Macro GameControllerGetStringForButton(button): SDL::_GetAscii(SDL::_GameControllerGetStringForButton(button)) :EndMacro
   GameControllerGetButton.Uint8(*gamecontroller.GameController, button.enum) As #FuncPrefix + "SDL_GameControllerGetButton"
-  GameControllerRumble.int(*gamecontroller.GameController, low_frequency_rumble.Uint16, high_frequency_rumble.Uint16, duration_ms.Uint32) As #FuncPrefix + "SDL_GameControllerRumble"
+  ;GameControllerRumble.int(*gamecontroller.GameController, low_frequency_rumble.Uint16, high_frequency_rumble.Uint16, duration_ms.Uint32) As #FuncPrefix + "SDL_GameControllerRumble"
   GameControllerClose.void(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerClose"
   Macro GameControllerAddMappingsFromFile(file) :  SDL::GameControllerAddMappingsFromRW(SDL::RWFromFile(file, "rb"), 1) :EndMacro
 EndImport
@@ -3547,7 +3553,7 @@ ImportC #SDL2_mixer_lib
   Mix_GetNumMusicDecoders.int() As #FuncPrefix + "Mix_GetNumMusicDecoders"
   _Mix_GetMusicDecoder.r_ascii(index.int) As #FuncPrefix + "Mix_GetMusicDecoder"
   Macro Mix_GetMusicDecoder(index): sdl::_GetAscii(SDL::_Mix_GetMusicDecoder(index)) :EndMacro
-  Mix_HasMusicDecoder.t_bool(*name.p-ascii) As #FuncPrefix + "Mix_HasMusicDecoder"
+  ;Mix_HasMusicDecoder.t_bool(*name.p-ascii) As #FuncPrefix + "Mix_HasMusicDecoder"
   Mix_GetMusicType.enum(*music.Mix_Music) As #FuncPrefix + "Mix_GetMusicType"
   Mix_SetPostMix.void(*mix_func, *arg.pvoid) As #FuncPrefix + "Mix_SetPostMix"
   Mix_HookMusic.void(*mix_func, *arg.pvoid) As #FuncPrefix + "Mix_HookMusic"
@@ -3706,6 +3712,7 @@ Macro r_Net_Version: SDL::r_Version :EndMacro
 #NET_MAJOR_VERSION = 2
 #NET_MINOR_VERSION = 0
 #NET_PATCHLEVEL = 1
+#NET_COMPILEDVERSION = VERSIONNUM(#NET_MAJOR_VERSION,#NET_MINOR_VERSION,#NET_PATCHLEVEL)
 #INADDR_ANY = $00000000
 #INADDR_NONE = $FFFFFFFF
 #INADDR_LOOPBACK = $7f000001

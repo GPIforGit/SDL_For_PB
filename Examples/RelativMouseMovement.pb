@@ -1,5 +1,5 @@
 ﻿
-XIncludeFile "..\sdl2\SDL.pbi"
+XIncludeFile "../sdl2/SDL.pbi"
 XIncludeFile "renderer.pbi"
 
 
@@ -153,7 +153,7 @@ main()
   
   
 ; IDE Options = PureBasic 5.72 (Windows - x64)
-; CursorPosition = 11
+; CursorPosition = 1
 ; Folding = 0
 ; EnableXP
 ; DPIAware

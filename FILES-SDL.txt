@@ -1,11 +1,13 @@
 
 Directorys:
+	include.c
+		original c header files. 
 		
 	libSDL2_PB_HelperLib.c
-		sourcecode of the "libSDL2_PB_HelperLib.a" and "libSDL2_TTF_PB_HelperLib.a"
+		sourcecode of the "libSDL2_OB_HelperLib.a"
 			
 	sdl2
-		libSDL2*_PB_HelperLib*.a
+		libSDL2_PB_HelperLib.a
 			translate some c functions call, that pb doesn't support
 		SDL.pbi
 			main-SDL-file
@@ -18,25 +20,15 @@ Directorys:
 		SDL_ttf
 			add SDL_ttf-Support, include before SDL.pbi
 		SDL2*.lib
-			Libs for SDL2 (windows)
+			Libs for SDL2
 		
 	Tutorial
 		contains help files for "Lazy Foo' Production SDL-Tutorial", see readme.txt
 
-required frameworks for mac:
-	download *.dmg from this files
-		https://www.libsdl.org/download-2.0.php#source
-		https://www.libsdl.org/projects/SDL_image/
-		https://www.libsdl.org/projects/SDL_mixer/
-		https://www.libsdl.org/projects/SDL_net/
-		https://www.libsdl.org/projects/SDL_rtf/
-		https://www.libsdl.org/projects/SDL_ttf/
-	open the *.dmg
-	copy "sdl*.frameworks" to /Library/Frameworks/
-	more infos for example here: https://lazyfoo.net/tutorials/SDL/01_hello_SDL/mac/index.php
+	
 	
 
-required DLL (windows):
+required DLL:
 
 	SDL:
 		SDL2.dll

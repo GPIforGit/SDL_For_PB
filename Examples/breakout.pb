@@ -229,7 +229,7 @@ Procedure main()
   Protected.sCircle testBall
   Protected.l lastFPS
   Protected.l pause, oldPause
-  Protected.q delay
+  Protected.q delay,wasted
   Protected.q FrameCount,FrameTimer
   
   Protected.l Volume=128
@@ -288,7 +288,17 @@ Procedure main()
   sdl::Mix_PlayMusic(*MusBack,-1)
   
   FrameTimer=ElapsedMilliseconds()
+  
+  render\SetDrawColor(0,0,0,255)
+  render\Clear()
+  Render\Show()
+  render\Clear()
+  render\Show()
+  
+  Protected.q percent=100
   While Not quit
+    
+   
     
     delay= ElapsedMilliseconds()-FrameTimer
     If delay>200
@@ -297,8 +307,25 @@ Procedure main()
       FrameTimer=ElapsedMilliseconds()
     EndIf
     
-    render\winSetTitle(#title +" - "+ lastFPS+"ms"+" "+StrF(frameRate,2)+" Volume:"+Volume )
+   
+    If render\GetWastedMS()
+      wasted=(wasted+ render\GetWastedMS()) * percent / 100
+      If wasted>0
+        Delay(wasted)
+      EndIf
+    Else
+      wasted=0
+      If percent>0 And Not pause
+        percent-1
+      EndIf
+      Debug "limit:"+percent
+      
+    EndIf
     
+    ;Debug "" + wasted +" "+ render\GetWastedMS()
+    
+    render\winSetTitle(#title +" - "+ lastFPS+"ms"+" "+StrF(frameRate,2)+" Volume:"+Volume+" - Start-Delay:"+wasted+" / "+percent+"%" )
+     
     
     If lastFPS > #minFPS
       lastFPS = #minFPS ; ok, better slowdown as too big jumps!
@@ -362,7 +389,7 @@ Procedure main()
       EndSelect
       
     Wend
-    
+        
     If Not render\winHasKeyboard() And Not pause
       render\MouseSetRelative(#False)
       pause=#True
@@ -597,8 +624,8 @@ main()
 
 
 ; IDE Options = PureBasic 5.72 (Windows - x64)
-; CursorPosition = 596
-; FirstLine = 558
+; CursorPosition = 336
+; FirstLine = 99
 ; Folding = --
 ; EnableXP
 ; DPIAware

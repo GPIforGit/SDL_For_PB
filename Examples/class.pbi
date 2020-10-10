@@ -75,7 +75,7 @@ Macro CreateClass(_type_,_para_=() )
     Protected json
     
     Protected *SetMem.integer
-    Protected i
+    Protected i,offset
     
     *_#_type_#_functions=AllocateMemory(SizeOf(_type_))
     *SetMem=*_#_type_#_functions 
@@ -92,24 +92,27 @@ Macro CreateClass(_type_,_para_=() )
     Define ObjectValue = JSONValue(json), offset.i
     If ExamineJSONMembers(ObjectValue)
       While NextJSONMember(ObjectValue)
-        *SetMem= *_#_type_#_functions + GetJSONInteger(JSONMemberValue(ObjectValue))
+        offset=GetJSONInteger(JSONMemberValue(ObjectValue))
+        *SetMem= *_#_type_#_functions + offset
         *SetMem\i = GetRuntimeInteger( _dquote#_type_#_dquote + "_" + JSONMemberKey(ObjectValue)+"()" )   
+        If *setMem\i = 0
+          If offset=0
+            *SetMem\i = GetRuntimeInteger( _dquote#_type_#_dquote + "_" + _dquote#_type_#_dquote + "()" )
+            If *SetMem\i=0
+              *SetMem\i = @_DefaultNewDelete()
+            EndIf
+          ElseIf offset=1
+            *SetMem\i = @_DefaultNewDelete()
+          EndIf
+        EndIf
+        
       Wend
     EndIf
     
     *SetMem=*_#_type_#_functions 
     For i=1 To SizeOf(_type_) / SizeOf(Integer)
       If *SetMem\i=#Null
-        If i=1
-          *SetMem\i = GetRuntimeInteger( _dquote#_type_#_dquote + "_" + _dquote#_type_#_dquote + "()" )
-          If *SetMem=0
-            *SetMem\i=@_DefaultNewDelete()
-          EndIf
-        ElseIf i=2
-          *SetMem\i=@_DefaultNewDelete()
-        Else
-          Debug _dquote#_type_#_dquote + "MISSING FUNCTION: "+i
-        EndIf
+        Debug _dquote#_type_#_dquote + "MISSING FUNCTION: "+i
       EndIf
       *SetMem+SizeOf(Integer)
     Next
@@ -120,6 +123,7 @@ Macro CreateClass(_type_,_para_=() )
   _#_type_#_init ()
 EndMacro  
 ; IDE Options = PureBasic 5.72 (Windows - x64)
-; CursorPosition = 12
+; CursorPosition = 114
+; FirstLine = 78
 ; Folding = --
 ; EnableXP

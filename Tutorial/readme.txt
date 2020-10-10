@@ -1,5 +1,5 @@
 
-PatchLazyFooTutorial.exe should translate the "Lazy Foo' Production SDL-Tutorial" version 7/20/20 (others will not work).
+PatchLazyFooTutorial.pb should translate the "Lazy Foo' Production SDL-Tutorial" version 7/20/20 (others will not work).
 
 https://lazyfoo.net/tutorials/SDL/index.php
 
@@ -8,7 +8,7 @@ download the tutorial-files, extract them and run the exe.
 the directory should look like this:
 
 Tutorial\readme.txt
-Tutorial\PatchLazyFooTutorial.exe
+Tutorial\PatchLazyFooTutorial.pb
 Tutorial\01_hello_SDL\01_hello_SDL.cpp
 Tutorial\01_hello_SDL\readme.txt
 Tutorial\02_getting_an_image_on_the_screen\02_getting_an_image_on_the_screen.cpp

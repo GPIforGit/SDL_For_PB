@@ -20,8 +20,8 @@ Structure sController
   guidStr.s
   *pad.SDL::GameController
   *joy.SDL::Joystick
+  *haptic.SDL::Haptic
   JoyID.sdl::t_JoystickId 
-  ButtonSet.l
   
   axis.w[sdl::#CONTROLLER_AXIS_MAX]
   button.w[sdl::#CONTROLLER_BUTTON_MAX]
@@ -29,128 +29,19 @@ EndStructure
 
 Global NewList Controller.sController()
 
-Global Dim ControllerAxisName.s(5,sdl::#CONTROLLER_AXIS_MAX -1)
-Global Dim ControllerButtonName.s(5,sdl::#CONTROLLER_BUTTON_MAX-1)
+Global Dim ControllerAxisName.s(sdl::#CONTROLLER_AXIS_MAX -1)
+Global Dim ControllerButtonName.s(sdl::#CONTROLLER_BUTTON_MAX-1)
 
 Declare UpdateListeEntry(line)
 
 Procedure InitController()
   Protected.l a
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_AXIS_LEFTX)="LeftStickX"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_AXIS_LEFTY)="LeftStickY"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_AXIS_RIGHTX)="RightStickX"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_AXIS_RIGHTY)="RightStickY"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_AXIS_TRIGGERLEFT)="L2"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_AXIS_TRIGGERRIGHT)="R2"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_BUTTON_A)="Cross"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_BUTTON_B)="Circle"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_BUTTON_X)="Square"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_BUTTON_Y)="Triangle"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_BUTTON_GUIDE)="PS"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_BUTTON_LEFTSHOULDER)="L1"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_BUTTON_RIGHTSHOULDER)="R1"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_BUTTON_START)="Start"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_BUTTON_BACK)="Select"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_BUTTON_LEFTSTICK)="L3"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_BUTTON_RIGHTSTICK)="R3"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_BUTTON_DPAD_UP)="Up"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_BUTTON_DPAD_LEFT)="Left"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_BUTTON_DPAD_RIGHT)="Right"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS3, sdl::#CONTROLLER_BUTTON_DPAD_DOWN)="Down"
-  
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_AXIS_LEFTX)="LeftStickX"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_AXIS_LEFTY)="LeftStickY"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_AXIS_RIGHTX)="RightStickX"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_AXIS_RIGHTY)="RightStickY"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_AXIS_TRIGGERLEFT)="L2"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_AXIS_TRIGGERRIGHT)="R2"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_BUTTON_A)="Cross"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_BUTTON_B)="Circle"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_BUTTON_X)="Square"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_BUTTON_Y)="Triangle"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_BUTTON_GUIDE)="PS"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_BUTTON_LEFTSHOULDER)="L1"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_BUTTON_RIGHTSHOULDER)="R1"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_BUTTON_START)="Options"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_BUTTON_BACK)="Share"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_BUTTON_LEFTSTICK)="L3"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_BUTTON_RIGHTSTICK)="R3"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_BUTTON_DPAD_UP)="Up"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_BUTTON_DPAD_LEFT)="Left"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_BUTTON_DPAD_RIGHT)="Right"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_PS4, sdl::#CONTROLLER_BUTTON_DPAD_DOWN)="Down"
-  
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_AXIS_LEFTX)="LeftStickX"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_AXIS_LEFTY)="LeftStickY"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_AXIS_RIGHTX)="RightStickX"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_AXIS_RIGHTY)="RightStickY"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_AXIS_TRIGGERLEFT)="ZL"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_AXIS_TRIGGERRIGHT)="ZR"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_BUTTON_A)="B"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_BUTTON_B)="A"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_BUTTON_X)="Y"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_BUTTON_Y)="X"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_BUTTON_GUIDE)="Home"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_BUTTON_LEFTSHOULDER)="L"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_BUTTON_RIGHTSHOULDER)="R"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_BUTTON_START)="+"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_BUTTON_BACK)="-"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_BUTTON_LEFTSTICK)="RS"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_BUTTON_RIGHTSTICK)="LS"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_BUTTON_DPAD_UP)="Up"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_BUTTON_DPAD_LEFT)="Left"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_BUTTON_DPAD_RIGHT)="Right"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_NINTENDO_SWITCH_PRO, sdl::#CONTROLLER_BUTTON_DPAD_DOWN)="Down"
-  
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_AXIS_LEFTX)="LeftStickX"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_AXIS_LEFTY)="LeftStickY"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_AXIS_RIGHTX)="RightStickX"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_AXIS_RIGHTY)="RightStickY"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_AXIS_TRIGGERLEFT)="LT"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_AXIS_TRIGGERRIGHT)="RT"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_BUTTON_A)="A"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_BUTTON_B)="B"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_BUTTON_X)="X"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_BUTTON_Y)="Y"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_BUTTON_GUIDE)="Guide"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_BUTTON_LEFTSHOULDER)="LB"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_BUTTON_RIGHTSHOULDER)="RB"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_BUTTON_START)="Start"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_BUTTON_BACK)="Back"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_BUTTON_LEFTSTICK)="RS"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_BUTTON_RIGHTSTICK)="LS"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_BUTTON_DPAD_UP)="Up"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_BUTTON_DPAD_LEFT)="Left"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_BUTTON_DPAD_RIGHT)="Right"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOX360, sdl::#CONTROLLER_BUTTON_DPAD_DOWN)="Down"
-  
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_AXIS_LEFTX)="LeftStickX"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_AXIS_LEFTY)="LeftStickY"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_AXIS_RIGHTX)="RightStickX"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_AXIS_RIGHTY)="RightStickY"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_AXIS_TRIGGERLEFT)="LT"
-  ControllerAxisName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_AXIS_TRIGGERRIGHT)="RT"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_BUTTON_A)="A"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_BUTTON_B)="B"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_BUTTON_X)="X"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_BUTTON_Y)="Y"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_BUTTON_GUIDE)="Guide"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_BUTTON_LEFTSHOULDER)="LB"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_BUTTON_RIGHTSHOULDER)="RB"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_BUTTON_START)="Start"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_BUTTON_BACK)="Back"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_BUTTON_LEFTSTICK)="RS"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_BUTTON_RIGHTSTICK)="LS"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_BUTTON_DPAD_UP)="Up"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_BUTTON_DPAD_LEFT)="Left"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_BUTTON_DPAD_RIGHT)="Right"
-  ControllerButtonName(sdl::#CONTROLLER_TYPE_XBOXONE, sdl::#CONTROLLER_BUTTON_DPAD_DOWN)="Down"
   
   For a=0 To sdl::#CONTROLLER_AXIS_MAX-1
-    ControllerAxisName(sdl::#CONTROLLER_TYPE_UNKNOWN,a) = SDL::GameControllerGetStringForAxis(a)
+    ControllerAxisName(a) = SDL::GameControllerGetStringForAxis(a)
   Next
   For a=0 To sdl::#CONTROLLER_BUTTON_MAX-1
-    ControllerButtonName(sdl::#CONTROLLER_TYPE_UNKNOWN,a) = SDL::GameControllerGetStringForButton(a)
+    ControllerButtonName(a) = SDL::GameControllerGetStringForButton(a)
   Next
   
   
@@ -166,6 +57,11 @@ EndProcedure
 Procedure ExitController()
   ForEach Controller()
     With Controller()
+      If \haptic
+        sdl::HapticClose(\haptic)
+        \haptic = #Null
+      EndIf
+      
       If \pad
         sdl::GameControllerClose( \pad )
         \pad = #Null
@@ -183,6 +79,10 @@ Procedure RemoveController(removeJoyId.sdl::t_JoystickID)
   ForEach Controller()
     With Controller()
       If \JoyID = removeJoyId
+        If \haptic
+          sdl::HapticClose(\haptic)
+          \haptic = #Null
+        EndIf
         If \pad
           sdl::GameControllerClose( \pad )
           \pad = #Null
@@ -232,13 +132,9 @@ Procedure AddController()
     
     If do=#False
       If *pad 
-        If *pad <> Controller()\pad
-          SDL::GameControllerClose(*pad)
-        EndIf
+        SDL::GameControllerClose(*pad)
       Else
-        If *joy <> Controller()\joy
-          SDL::JoystickClose(*joy)
-        EndIf
+        SDL::JoystickClose(*joy)
       EndIf
       
     Else
@@ -249,7 +145,6 @@ Procedure AddController()
         \pad = *pad
         If \pad
           \Name = SDL::GameControllerName( \pad )    
-          \ButtonSet = sdl::GameControllerGetType( \pad )
         EndIf
         
         \joy = *joy
@@ -265,6 +160,15 @@ Procedure AddController()
           \guidStr = PeekS(*guidstring,33,#PB_Ascii)
           
           FreeMemory(*guidstring)
+          
+          ;haptic
+          \haptic = SDL::HapticOpenFromJoystick(*joy)
+          
+          If \haptic And Not (SDL::HapticRumbleSupported(\haptic) And SDL::HapticRumbleInit(\haptic) = 0)
+            SDL::HapticClose(\haptic)
+            \haptic = #Null
+          EndIf
+          
           
         EndIf
         \JoyID=id
@@ -285,8 +189,7 @@ Procedure FillList()
       
       AddGadgetItem( gadList,i, \name + #LF$ +
                                 \guidStr + #LF$ +
-                                \JoyID + #LF$ +
-                                \ButtonSet)
+                                \JoyID)
       SetGadgetItemData( gadList,i, @controller())
       
       UpdateListeEntry( i )
@@ -337,13 +240,13 @@ Procedure UpdateListeEntry(line)
   Protected.l i
   str=""
   For i=0 To sdl::#CONTROLLER_AXIS_MAX-1
-    str+ ControllerAxisName(*con\ButtonSet,i)+":"+StrF(*con\axis[i] / 32767.0,2)+" "
+    str+ ControllerAxisName(i)+":"+StrF(*con\axis[i] / 32767.0,2)+" "
   Next
   SetGadgetItemText(gadList,line,str,4)
   
   str=""
   For i=0 To sdl::#CONTROLLER_BUTTON_MAX-1
-    str+ ControllerButtonName(*con\ButtonSet,i)+":"+*con\button[i]+" "
+    str+ ControllerButtonName(i)+":"+*con\button[i]+" "
   Next
   SetGadgetItemText(gadList,line,str,5)
     
@@ -391,17 +294,17 @@ Procedure DoNextStage()
   ; Change button-text
   Select stage
     Case #stage_ScanAxis
-      SetGadgetText(gadButton,"Move Axis "+ControllerAxisName(0,substage)+#LF$+"or click here for skip")
+      SetGadgetText(gadButton,"Move Axis "+ControllerAxisName(substage)+#LF$+"or click here for skip")
     Case #stage_ScanButton
-      SetGadgetText(gadButton,"Press Button "+ControllerButtonName(0,substage) + " (XBOX-Design!)"+#LF$+"or click here For skip")
+      SetGadgetText(gadButton,"Press Button "+ControllerButtonName(substage) + " (XBOX-Design!)"+#LF$+"or click here For skip")
   EndSelect
 EndProcedure
 Procedure RegisterScan(x.s)
   Select stage
     Case #stage_ScanAxis
-      _scanString+ControllerAxisName(0,substage)+":"+x+","
+      _scanString+ControllerAxisName(substage)+":"+x+","
     Case #stage_ScanButton
-      _scanstring+ControllerButtonName(0,substage)+":"+x+","
+      _scanstring+ControllerButtonName(substage)+":"+x+","
   EndSelect
   Debug "SCAN:"+x
 EndProcedure
@@ -453,11 +356,9 @@ Procedure DoSDLMessages()
           UpdateListeEntry( findListEntry(*con) )
           
           If SDLEvent\caxis\axis = SDL::#CONTROLLER_AXIS_TRIGGERLEFT Or SDLEvent\caxis\axis = SDL::#CONTROLLER_AXIS_TRIGGERRIGHT
-            SDL::GameControllerRumble(*con\pad, 
-                                      *con\axis[ SDL::#CONTROLLER_AXIS_TRIGGERLEFT ] * $ffff /32768 ,
-                                      *con\axis[ SDL::#CONTROLLER_AXIS_TRIGGERRIGHT ] * $ffff/32768 ,
-                                      200)
-          
+            If *con\haptic
+              SDL::HapticRumblePlay( *con\haptic, SDLEvent\caxis\value / 32767.0, 200)
+            EndIf
           EndIf
           
         EndIf        
@@ -500,6 +401,8 @@ Procedure main()
   InitController()
   AddController()
   FillList()
+  
+  HideGadget(gadButton,#True)
   
   Protected WinEvent
   
@@ -550,7 +453,8 @@ EndProcedure
 
 
 main()
-; IDE Options = PureBasic 5.72 (MacOS X - x64)
-; CursorPosition = 19
-; Folding = D5-
+; IDE Options = PureBasic 5.72 (Windows - x64)
+; CursorPosition = 360
+; FirstLine = 305
+; Folding = -9-
 ; EnableXP

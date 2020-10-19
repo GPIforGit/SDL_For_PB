@@ -135,70 +135,10 @@ DeclareModule SDL
   Declare.i _iif(a.i,b.i,c.i)
   ;}
 ;-----------------------
-;- SDL_platform.h.pbi
-;{
-
-ImportC #SDL2_lib
-  _GetPlatform.r_ascii() As #FuncPrefix + "SDL_GetPlatform"
-  Macro GetPlatform(): SDL::_GetAscii(SDL::_GetPlatform()) :EndMacro
-EndImport
-;}
-;-----------------------
-;- SDL_config.h.pbi
-;{
-
-#HAVE_DDRAW_H = 1
-#HAVE_DINPUT_H = 1
-#HAVE_DSOUND_H = 1
-#HAVE_DXGI_H = 1
-#HAVE_XINPUT_H = 1
-#HAVE_MMDEVICEAPI_H = 1
-#HAVE_AUDIOCLIENT_H = 1
-; Enable various audio drivers 
-#AUDIO_DRIVER_WASAPI = 1
-#AUDIO_DRIVER_DSOUND = 1
-#AUDIO_DRIVER_WINMM = 1
-#AUDIO_DRIVER_DISK  = 1
-#AUDIO_DRIVER_DUMMY = 1
-; Enable various input drivers 
-#JOYSTICK_DINPUT = 1
-#JOYSTICK_XINPUT = 1
-#JOYSTICK_HIDAPI = 1
-#HAPTIC_DINPUT   = 1
-#HAPTIC_XINPUT   = 1
-; Enable the dummy sensor driver 
-#SENSOR_DUMMY = 1
-; Enable various Shared object loading systems 
-#LOADSO_WINDOWS = 1
-; Enable various threading systems
-#THREAD_WINDOWS = 1
-; Enable various timer systems 
-#TIMER_WINDOWS = 1
-; Enable various video drivers 
-#VIDEO_DRIVER_DUMMY = 1
-#VIDEO_DRIVER_WINDOWS = 1
-#VIDEO_RENDER_D3D = 1
-#VIDEO_RENDER_D3D11 = 0
-; Enable OpenGL support 
-#VIDEO_OPENGL = 1
-#VIDEO_OPENGL_WGL = 1
-#VIDEO_RENDER_OGL = 1
-#VIDEO_RENDER_OGL_ES2 = 1
-#VIDEO_OPENGL_ES2 = 1
-#VIDEO_OPENGL_EGL = 1
-; Enable Vulkan support 
-#VIDEO_VULKAN = 1
-; Enable system power support
-#POWER_WINDOWS = 1
-; Enable filesystem support
-#FILESYSTEM_WINDOWS = 1
-; Enable assembly routines (Win64 doesn't have inline asm)
-#ASSEMBLY_ROUTINES = 1
-;}
-;-----------------------
 ;- SDL_stdinc.h.pbi
 ;{
 
+;XIncludeFile "SDL_config.h.pbi"
 Macro FOURCC(A, B, C, D)
   ((( a & $ff) << 0) | ((B & $ff) << 8) | ((C & $ff) << 16) | (( D & $ff) << 24))
 EndMacro
@@ -283,6 +223,7 @@ Declare.i min(a.i,b.i)
 ;- SDL_assert.h.pbi
 ;{
 
+;XIncludeFile "SDL_config.h.pbi"
 Enumeration AssertState
   #ASSERTION_RETRY
   #ASSERTION_BREAK
@@ -413,6 +354,15 @@ ImportC #SDL2_lib
     CompilerDefault
       CompilerError "SDL: Unknown assertion level"
   CompilerEndSelect
+EndImport
+;}
+;-----------------------
+;- SDL_platform.h.pbi
+;{
+
+ImportC #SDL2_lib
+  _GetPlatform.r_ascii() As #FuncPrefix + "SDL_GetPlatform"
+  Macro GetPlatform(): SDL::_GetAscii(SDL::_GetPlatform()) :EndMacro
 EndImport
 ;}
 ;-----------------------
@@ -2231,7 +2181,7 @@ ImportC #SDL2_lib
   GameControllerFromPlayerIndex.r_GameController(player_index.int) As #FuncPrefix + "SDL_GameControllerFromPlayerIndex"
   _GameControllerName.r_ascii(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerName"
   Macro GameControllerName(gamec): SDL::_GetAscii(SDL::_GameControllerName(gamec)) :EndMacro
-  ;GameControllerGetType.enum(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetType"
+  GameControllerGetType.enum(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetType"
   GameControllerGetPlayerIndex.int(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetPlayerIndex"
   GameControllerSetPlayerIndex.void(*gamecontroller.GameController, player_index.int) As #FuncPrefix + "SDL_GameControllerSetPlayerIndex"
   GameControllerGetVendor.Uint16(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetVendor"
@@ -2249,7 +2199,7 @@ ImportC #SDL2_lib
   _GameControllerGetStringForButton.r_ascii(button.enum) As #FuncPrefix + "SDL_GameControllerGetStringForButton"
   Macro GameControllerGetStringForButton(button): SDL::_GetAscii(SDL::_GameControllerGetStringForButton(button)) :EndMacro
   GameControllerGetButton.Uint8(*gamecontroller.GameController, button.enum) As #FuncPrefix + "SDL_GameControllerGetButton"
-  ;GameControllerRumble.int(*gamecontroller.GameController, low_frequency_rumble.Uint16, high_frequency_rumble.Uint16, duration_ms.Uint32) As #FuncPrefix + "SDL_GameControllerRumble"
+  GameControllerRumble.int(*gamecontroller.GameController, low_frequency_rumble.Uint16, high_frequency_rumble.Uint16, duration_ms.Uint32) As #FuncPrefix + "SDL_GameControllerRumble"
   GameControllerClose.void(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerClose"
   Macro GameControllerAddMappingsFromFile(file) :  SDL::GameControllerAddMappingsFromRW(SDL::RWFromFile(file, "rb"), 1) :EndMacro
 EndImport
@@ -3795,6 +3745,44 @@ Declare.uint32 Net_Read32(*areap.puint32)
 ;}
   CompilerEndIf
   Declare.t_bool _QuitRequested()
+  CompilerIf #PB_Compiler_Debugger
+    Define.sdl::version version
+    Define.sdl::version *version
+    Define ver
+    sdl::GetVersion(version)
+    ver = sdl::VERSIONNUM(version\major,version\minor,version\patch)
+    If ver < sdl::#COMPILEDVERSION
+      Debug "WARNING! outdateded SDL - expect "+ sdl::#COMPILEDVERSION +" got "+ ver
+    EndIf
+    CompilerIf SDL::#SDL_USE_MIXER
+      *version= sdl::Mix_Linked_Version()
+      ver = sdl::VERSIONNUM(*version\major,*version\minor,*version\patch)
+      If ver < sdl::#MIXER_COMPILEDVERSION
+        Debug "WARNING! outdateded SDL_mixer - expect "+ sdl::#MIXER_COMPILEDVERSION +" got "+ ver        
+      EndIf
+    CompilerEndIf
+    CompilerIf SDL::#SDL_USE_IMAGE
+      *version= sdl::Img_Linked_Version()
+      ver = sdl::VERSIONNUM(*version\major,*version\minor,*version\patch)
+      If ver < sdl::#IMAGE_COMPILEDVERSION
+        Debug "WARNING! outdateded SDL_image - expect "+ sdl::#IMAGE_COMPILEDVERSION +" got "+ ver
+      EndIf
+    CompilerEndIf
+    CompilerIf SDL::#SDL_USE_TTF
+      *version= sdl::ttf_Linked_Version()
+      ver = sdl::VERSIONNUM(*version\major,*version\minor,*version\patch)
+      If ver < sdl::#TTF_COMPILEDVERSION
+        Debug "WARNING! outdateded SDL_ttf - expect "+ sdl::#TTF_COMPILEDVERSION +" got "+ ver
+      EndIf
+    CompilerEndIf
+    CompilerIf SDL::#SDL_USE_NET
+      *version= sdl::net_Linked_Version()
+      ver = sdl::VERSIONNUM(*version\major,*version\minor,*version\patch)
+      If ver < sdl::#NET_COMPILEDVERSION
+        Debug "WARNING! outdateded SDL_net - expect "+ sdl::#NET_COMPILEDVERSION +" got "+ ver
+      EndIf
+    CompilerEndIf
+  CompilerEndIf
 EndDeclareModule
 Module SDL
   Procedure.t_AudioDeviceID OpenAudioDevice(device.s, iscapture.int, *desired.AudioSpec, *obtained.AudioSpec, allowed_changes.int)

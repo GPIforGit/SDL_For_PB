@@ -10,14 +10,14 @@ XIncludeFile "Collision.pbi"
 
 #title="Line Collision Check"
 
-Global.Renderer Render 
+Global.Renderer::Class Render 
 
 Procedure.l SDL_init(init.l, title.s, w.l, h.l, renw.l=0, renh.l=0, IntegerScale=#False)
   If 0 <> SDL::init(init)
     ProcedureReturn #False
   EndIf
   
-  render=NewRenderer(title, sdl::#WINDOWPOS_CENTERED, sdl::#WINDOWPOS_CENTERED, w, h, 
+  render=renderer::New(title, sdl::#WINDOWPOS_CENTERED, sdl::#WINDOWPOS_CENTERED, w, h, 
                      sdl::#WINDOW_ALLOW_HIGHDPI | sdl::#WINDOW_RESIZABLE, 
                      SDL::#RENDERER_ACCELERATED |  SDL::#RENDERER_TARGETTEXTURE | SDL::#RENDERER_PRESENTVSYNC)
   
@@ -44,7 +44,7 @@ Procedure.l SDL_init(init.l, title.s, w.l, h.l, renw.l=0, renh.l=0, IntegerScale
 EndProcedure
 
 Procedure SDL_quit()
-  DeleteObject(render)
+  Object::Delete(render)
   
   SDL::Quit()
 EndProcedure
@@ -298,9 +298,9 @@ main()
   
   
   
-; IDE Options = PureBasic 5.72 (MacOS X - x64)
-; CursorPosition = 268
-; FirstLine = 240
+; IDE Options = PureBasic 5.72 (Windows - x64)
+; CursorPosition = 46
+; FirstLine = 42
 ; Folding = -
 ; EnableXP
 ; DPIAware

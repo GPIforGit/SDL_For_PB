@@ -27,9 +27,17 @@ DeclareModule GUI
   Enumeration Class_tex
     #tex_stretch
     #tex_single
-    #tex_tile
-    #tex_tileCenter
+    #tex_tile   
   EndEnumeration
+  
+  EnumerationBinary
+    #tex_AnchorLeft =0
+    #tex_AnchorTop = 0 
+    #tex_AnchorRight = 1<<8
+    #tex_AnchorBottom 
+  EndEnumeration
+  #mask_tex=$ff
+  
   
   Enumeration Class_anchor
     #Anchor_None=0
@@ -612,6 +620,12 @@ Module GUI
     
     *frame\mClass\NeedRecalc = #True
     
+    If anchor = #Anchor_None And ( offset < - #Offset_SpecialStart Or offset > #Offset_SpecialStart )
+      anchor = #Anchor_Direct
+      *AnchorFrame = *frame
+    EndIf
+    
+    
     If anchor = #Anchor_None Or *AnchorFrame = #Null
       Select which
         Case #Anchor_Left : *frame\rect\x = offset : *anchor = *frame\Left
@@ -671,42 +685,35 @@ Module GUI
           
           ;Debug "draw:"+rect\x+" "+rect\y+" "+rect\w+" "+rect\h
           
-          Select *cur\texStyle
+          Select *cur\texStyle & #mask_tex
             Case #tex_stretch
               *cur\tex\Draw( rect\x, rect\y, rect\w, rect\h)
             Case #tex_single
               *cur\tex\Draw( rect\x, rect\y)
               
-            Case #tex_tile, #tex_tileCenter
-              If *cur\texStyle=#tex_tile
+            Case #tex_tile
+              
+              If *cur\texStyle & #tex_AnchorRight
+                offx = rect\w % *cur\texClip\w
+                If offx 
+                  offx = *cur\texClip\w - offx
+                EndIf
+                w = *cur\texClip\w
+              Else
                 offx = 0
                 w = *cur\texClip\w
+              EndIf
+              
+              If *cur\texStyle & #tex_AnchorBottom
+                offy = rect\h % *cur\texClip\h
+                If offy 
+                  offy = *cur\texClip\h - offy
+                EndIf
+                h = *cur\texClip\h
+              Else                
                 offy = 0
                 h = *cur\texClip\h
-                
-              Else
-                If rect\w > *cur\texClip\w
-                  offx= (rect\w % *cur\texClip\w) 
-                  w = *cur\texClip\w
-                  If offx
-                    offx = (*cur\texClip\w- offx)/2
-                  EndIf
-                Else
-                  offx = 0
-                  w = rect\w
-                EndIf
-                
-                If rect\h > *cur\texClip\h
-                  offy= (rect\h % *cur\texClip\h) 
-                  h = *cur\texClip\h
-                  If offy
-                    offy = (*cur\texClip\h- offy)/2
-                  EndIf
-                Else 
-                  offy = 0
-                  h = rect\h
-                EndIf
-              EndIf            
+              EndIf  
               
               y=rect\y - offy
               While y < rect\y+rect\h
@@ -1244,7 +1251,7 @@ Module GUI
       *self\globalValid = #True    
       Frame__CalculateAllElements( *self\baseElement\child )
       i+1
-    Until i >= 5 Or *self\globalValid = #True
+    Until i >= 3 Or *self\globalValid = #True
     ClearList(*self\HitBox())    
     Frame__CalculateAllHitboxes( *self\baseElement\child )
     
@@ -1531,7 +1538,6 @@ Module GUI
   
 EndModule
 ; IDE Options = PureBasic 5.72 (Windows - x64)
-; CursorPosition = 1068
-; FirstLine = 1055
+; CursorPosition = 11
 ; Folding = ------------
 ; EnableXP

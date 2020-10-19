@@ -17,13 +17,27 @@ DeclareModule Gadget
     offset.sdl::Point
     offsetPushed.sdl::point  
   EndStructure
-  Structure sSliderHorizontalStyle
-    *texture
+  Structure sSliderStyle
+    *texture.renderer::Texture
+    vertical.l
+    flipped.l
+  EndStructure
+  Structure sFrameStyle
+    *Texture.renderer::Texture
+    border.l
+    corner.l
+    stretch.l
   EndStructure
   
+  EnumerationBinary
+    #Frame_Moveable
+    #Frame_Sizeable
+  EndEnumeration
+  
+   
   Declare Button(*parentGuiFrame, x.l,y.l,w.l,h.l, *sButtonStyle, Text.s, name.s="")
-  Declare SliderHorizontal(*frame.gui::frame, x.l, y.l, w.l, h.l, *style.sSliderHorizontalStyle,name.s="")
-  Declare CreateFrame(*ele.gui::frame, *TexFrame.renderer::texture, sizeable.l=#False, moveable.l=#False, BorderSize.f = 1.0/3.0, CornerSize.f = -99.0)
+  Declare Slider(*frame.gui::frame, x.l, y.l, w.l, h.l, *sSliderStyle,name.s="")
+  Declare CreateFrame(*ele.gui::frame, *sFrameStyle, flags.l = #Null)
 EndDeclareModule
 
 ;- Gadget
@@ -31,7 +45,7 @@ Module Gadget
   EnableExplicit
   Enumeration type
     #type_button
-    #type_sliderHorizontal
+    #type_slider
     #type_max
   EndEnumeration
     
@@ -41,8 +55,8 @@ Module Gadget
     *TexTextHighlight.renderer::Texture
     *TexTextDisabled.renderer::Texture
   EndStructure
-  Structure sSliderHData
-    *style.sSliderHorizontalStyle
+  Structure sSliderData
+    *style.sSliderStyle
   EndStructure
   
   Structure sGadgetData
@@ -50,7 +64,7 @@ Module Gadget
     state.l   
     StructureUnion
       button.sButtonData
-      SliderH.sSliderHData
+      Slider.sSliderData
     EndStructureUnion
   EndStructure
   #UserData = "GadgetData"
@@ -123,12 +137,12 @@ Module Gadget
     
   EndProcedure
   
-  Procedure SliderHorizontalUpdate(*but.gui::Frame, *bData.sGadgetData)
-    Protected.gui::frame frame
+  Procedure SliderUpdate(*but.gui::frame, *bData.sGadgetData)
+    Protected.gui::frame frameSlider,frameLeft,frameRight,frameMid
     Protected.f top, bot
     Protected.l what
-        
-    If *bData\type <> #type_sliderHorizontal
+    
+    If *bData\type <> #type_slider
       ProcedureReturn 
     EndIf    
     
@@ -157,18 +171,22 @@ Module Gadget
         bot = 4.0/4.0
     EndSelect
     
-    frame = *but\GetFrame(".Slider")
-    frame\SetTexture( *bData\SliderH\style\texture, 0.0,top, 0.25,bot)
-        
-    frame = *but\GetFrame(".Left")
-    frame\SetTexture( *bData\SliderH\style\texture, 0.25,top, 0.50,bot)
+    frameSlider = *but\GetFrame(".Slider")
+    frameLeft = *but\GetFrame(".Left")
+    frameRight = *but\GetFrame(".Right")
+    frameMid = *but\GetFrame(".Mid")
     
-    frame = *but\GetFrame(".Right")
-    frame\SetTexture( *bData\SliderH\style\texture, 0.75,top, 1.0,bot)
-    
-    frame = *but\GetFrame(".Mid")
-    frame\SetTexture( *bData\SliderH\style\texture, 0.50,top, 0.75,bot)
-    
+    If *bData\Slider\style\vertical
+      frameSlider\SetTexture( *bData\Slider\style\texture, top, 0.0, bot, 0.25)
+      frameLeft\SetTexture( *bData\Slider\style\texture, top, 0.25, bot, 0.50)
+      frameRight\SetTexture( *bData\Slider\style\texture, top, 0.75, bot, 1.0)
+      frameMid\SetTexture( *bData\Slider\style\texture, top, 0.50, bot, 0.75)
+    Else
+      frameSlider\SetTexture( *bData\Slider\style\texture, 0.0,top, 0.25,bot)
+      frameLeft\SetTexture( *bData\Slider\style\texture, 0.25,top, 0.50,bot)
+      frameRight\SetTexture( *bData\Slider\style\texture, 0.75,top, 1.0,bot)
+      frameMid\SetTexture( *bData\Slider\style\texture, 0.50,top, 0.75,bot)
+    EndIf
     
   EndProcedure
   
@@ -176,8 +194,8 @@ Module Gadget
     Select *bData\type
       Case #type_button
         ButtonUpdate( *gad, *bData )
-      Case #type_sliderHorizontal
-        SliderHorizontalUpdate(*gad.gui::Frame, *bData)
+      Case #type_slider
+        SliderUpdate(*gad.gui::Frame, *bData)
     EndSelect
   EndProcedure
   
@@ -207,30 +225,62 @@ Module Gadget
     GadgetUpdate(*gad\GetParent(), *bData)
     *gad\StopUserSizingMoving()
   EndProcedure
+  
   Procedure Slider_moving(event, *gad.gui::Frame, *bData.sGadgetData)
     Protected.gui::Frame *parent = *gad\GetParent()
-    *parent\SetUserDataF("Value", *gad\GetX() / (*parent\GetW()-*gad\GetW()),#True)
+    Protected.f value
+    If *bData\Slider\style\vertical
+      value= *gad\GetY() / (*parent\GetH()-*gad\GetH())
+    Else
+      value= *gad\GetX() / (*parent\GetW()-*gad\GetW())
+    EndIf
+    If value < 0.0 : value = 0.0 : ElseIf value > 1.0 : value = 1.0 : EndIf
+    If *bData\Slider\style\flipped
+      value = 1.0-value
+    EndIf
+    *parent\SetUserDataF("Value", value, #True)
+    
     *parent\DoOn(gui::#Event_LeftClick)    
   EndProcedure
+  
   Procedure Slider_UserData(event, *parent.gui::frame, *bData.sGadgetData)
     Protected.gui::Frame *gad 
+    Protected.f value
     If PeekS(event)="Value"
       *gad= *parent\GetFrame(".Slider")
-      *gad\setx( (*parent\GetW()-*gad\GetW()) * *parent\GetUserDataF("Value") )      
+      value =  *parent\GetUserDataF("Value")
+      If value < 0.0 : value = 0.0 : ElseIf value > 1.0 : value = 1.0 : EndIf
+      If *bData\Slider\style\flipped
+        value = 1.0-value
+      EndIf
+      
+      If *bData\Slider\style\vertical
+        *gad\SetY( (*parent\GetH()-*gad\GetH()) * Value )      
+      Else
+        *gad\SetX( (*parent\GetW()-*gad\GetW()) * Value )      
+      EndIf
     EndIf
   EndProcedure
+  
   Procedure Slider_Click(event, *parent.gui::Frame, *bData.sGadgetData)
     Protected.gui::Frame *gad = *parent\GetFrame(".Slider")
     Protected m.sdl::point
     Protected value.f
     *parent\GetRelativMouse(m)
-    m\x - *gad\geth()/2
-    value.f = m\x / (*parent\GetW()-*gad\GetW())
-    If value.f < 0
-      value.f = 0
-    ElseIf value.f > 1.0
-      value.f = 1.0
+    
+    If *bData\Slider\style\vertical
+      m\y - *gad\GetW()/2
+      value.f = m\y / (*parent\GetH()-*gad\GetH())
+    Else
+      m\x - *gad\geth()/2
+      value.f = m\x / (*parent\GetW()-*gad\GetW())
     EndIf
+        
+    If value.f < 0.0 : value.f = 0.0 : ElseIf value.f > 1.0 : value.f = 1.0 : EndIf
+    If *bData\Slider\style\flipped
+      value = 1.0-value
+    EndIf
+    
     ;Debug value.f
     *parent\SetUserDataF("Value",value)
     ;simulate left click on slider
@@ -299,15 +349,13 @@ Module Gadget
     *ele\StartUserSizing(what)
   EndProcedure
   Procedure FrameMove_LeftDown(event.l, *frame.GUI::frame, what.l)
-    Debug "move "+ *frame\GetName()
     *frame\SortUp()
     *frame\StartUserMoving()
   EndProcedure
   Procedure FraneStop_OnLeftUp(event.l, *frame.GUI::Frame, what.l)
     *frame\StopUserSizingMoving()
   EndProcedure
-  
-  
+    
   Procedure Button(*frame.gui::frame, x.l, y.l, w.l, h.l, *style.sButtonStyle, text.s,name.s="")
     If name=""
       name="BTN_"+text
@@ -372,7 +420,7 @@ Module Gadget
     ProcedureReturn *but
   EndProcedure
   
-  Procedure SliderHorizontal(*frame.gui::frame, x.l, y.l, w.l, h.l, *style.sSliderHorizontalStyle,name.s="")
+  Procedure Slider(*frame.gui::frame, x.l, y.l, w.l, h.l, *style.sSliderStyle,name.s="")
     Static count.l
     If name=""
       count+1
@@ -382,31 +430,49 @@ Module Gadget
     Protected.gui::frame deco
     Protected.sGadgetData *bData = AllocateStructure(sGadgetData)
     *bData\state = #state_none
-    *bData\type = #type_sliderHorizontal
-    *bData\SliderH\style = *style
-    
-    
+    *bData\type = #type_slider
+    *bData\Slider\style = *style
+        
     *slider\SetPosition(x,y,w,h)
-    
-    
-    deco=*slider\NewChild("Left", gui::#State_OnBack)    
-    deco\SetPosition(h/2,0, h, h)
-    
+        
+    deco=*slider\NewChild("Left", gui::#State_OnBack)
+    If *bData\Slider\style\vertical
+      deco\SetPosition(0,0, w, w)
+    Else
+      deco\SetPosition(0,0, h, h)
+    EndIf
+         
     deco=*slider\NewChild("Right", gui::#State_OnBack)
-    deco\SetPosition(0,0, h, h)
-    deco\setX(-h*3/2, gui::#Anchor_Right,"..")
+    If *bData\Slider\style\vertical
+      deco\SetPosition(0,0, w, w)
+      deco\SetY(-w,gui::#Anchor_Bottom,"..")
+    Else
+      deco\SetPosition(0,0, h, h)
+      deco\SetX(-h,gui::#Anchor_Right,"..")
+    EndIf
     
     deco=*slider\NewChild("Mid", gui::#State_OnBack)
-    deco\SetX(0, gui::#Anchor_Right, "..Left")
-    deco\Sety(0, gui::#Anchor_Top, "..Left")
-    deco\SetW(0, gui::#Anchor_Left, "..Right")
-    deco\setH(0, gui::#Anchor_Bottom, "..Right")
+    If *bData\Slider\style\vertical
+      deco\SetX(0, gui::#Anchor_Left, "..Left")
+      deco\Sety(0, gui::#Anchor_Bottom, "..Left")
+      deco\SetW(0, gui::#Anchor_Right, "..Right")
+      deco\setH(0, gui::#Anchor_Top, "..Right")
+    Else
+      deco\SetX(0, gui::#Anchor_Right, "..Left")
+      deco\Sety(0, gui::#Anchor_Top, "..Left")
+      deco\SetW(0, gui::#Anchor_Left, "..Right")
+      deco\setH(0, gui::#Anchor_Bottom, "..Right")
+    EndIf
     
     deco=*slider\NewChild("Slider")
-    deco\SetPosition(0,0, h, h)
+    If *bData\Slider\style\vertical
+      deco\SetPosition(0,0, w, w)
+    Else
+      deco\SetPosition(0,0, h, h)
+    EndIf
     
     *slider\SetUserData(#UserData, *bData)
-    SliderHorizontalUpdate(*slider, *bData)
+    SliderUpdate(*slider, *bData)
     
     deco\SetOn(gui::#Event_LeftDown, @Slider_LeftDown(), *bData)
     deco\SetOn(gui::#Event_LeftUp, @Slider_LeftUp(), *bData)
@@ -418,149 +484,147 @@ Module Gadget
     *slider\SetOn(gui::#Event_UserData, @Slider_UserData(), *bData)
     *slider\SetOn(gui::#Event_LeftDown, @Slider_Click(), *bData)
     
+    *slider\SetUserDataF("Value",0.0)
+    
     ProcedureReturn *slider
   EndProcedure
   
-  Procedure CreateFrame(*ele.gui::frame, *TexFrame.renderer::texture, sizeable.l=#False, moveable.l=#False, BorderSize.f = 1.0/3.0, CornerSize.f = -99.0)
-    Protected.GUI::frame deco
+  Procedure CreateFrame(*ele.gui::frame, *style.sFrameStyle, flags.l = #Null)
+    Protected.GUI::frame decoTop,decoBot,decoLeft,decoRight,decoLT,decoRT,decoLB,decoRB,decoMid
     Protected.l outside
+    Protected.l offx,offy,offw,offh,offmid,offCorner
+    #OneThird=1.0/3.0
     
-    If BorderSize<0
-      BorderSize = -BorderSize
+    Protected.l tw = *style\Texture\GetWidth() * #OneThird
+    Protected.l border = *style\border
+    Protected.l corner = *style\corner
+    Protected.l stretch
+        
+    If border = 0
+      border = tw
+    EndIf
+       
+    If Border < 0
       outside = gui::#State_ClipOutside
+      border = -Border
+      offx = -border
+      offy = -border
+      offw = 0
+      offh = 0
+      offmid = border
+      offCorner = 0
+      If corner <= Border
+        corner = Border
+      EndIf
     Else
       outside = 0
+      offx = 0
+      offy = 0
+      offw = -Border
+      offh = -Border
+      offmid = Border
+      If corner <= Border
+        corner = Border
+      EndIf
+      offCorner = Corner
+    EndIf
+    
+    If *style\Stretch
+      Stretch = gui::#tex_stretch
+    Else
+      Stretch = gui::#tex_tile
+    EndIf
+    
+    decoTop=*ele\NewChild("Top", outside | gui::#State_OnBack)
+    decoTop\SetTexture( *style\Texture, #OneThird,0,   1.0-#OneThird,#OneThird, Stretch | gui::#tex_AnchorTop)
+    
+    decoBot=*ele\NewChild("Bottom", outside | gui::#State_OnBack)
+    decoBot\SetTexture( *style\Texture, #OneThird,1.0-#OneThird,   1.0-#OneThird,1.0, Stretch | gui::#tex_AnchorBottom)
+    
+    decoLeft=*ele\NewChild("Left", outside | gui::#State_OnBack)
+    decoLeft\SetTexture(*style\Texture, 0, #OneThird,  #OneThird,1.0-#OneThird, Stretch | gui::#tex_AnchorLeft)
+    
+    decoRight=*ele\NewChild("Right", outside | gui::#State_OnBack)
+    decoRight\SetTexture(*style\Texture, 1.0-#OneThird, #OneThird,  1.0,1.0-#OneThird, Stretch | gui::#tex_AnchorRight)
+    
+    decoMid=*ele\NewChild("Mid", outside | gui::#State_OnBack)
+    decoMid\SetTexture( *style\Texture, #OneThird, #OneThird, 1.0-#OneThird, 1.0-#OneThird, Stretch)
+    
+    decoLT=*ele\NewChild("LeftTop", outside | gui::#State_OnBack)
+    decoLT\SetTexture( *style\Texture, 0, 0, #OneThird, #OneThird,gui::#tex_tile | gui::#tex_AnchorTop|gui::#tex_AnchorLeft)
+    
+    decoRT=*ele\NewChild("RightTop", outside | gui::#State_OnBack)
+    decoRT\SetTexture( *style\Texture, 1.0-#OneThird, 0, 1.0, #OneThird,gui::#tex_tile | gui::#tex_AnchorTop|gui::#tex_AnchorRight)
+    
+    decoLB=*ele\NewChild("LeftBottom", outside | gui::#State_OnBack)
+    decoLB\SetTexture( *style\Texture, 0, 1.0-#OneThird, #OneThird, 1.0,gui::#tex_tile | gui::#tex_AnchorBottom|gui::#tex_AnchorLeft)
+    
+    decoRB=*ele\NewChild("RightBottom", outside | gui::#State_OnBack)
+    decoRB\SetTexture( *style\Texture, 1.0-#OneThird, 1.0-#OneThird, 1.0, 1.0,gui::#tex_tile | gui::#tex_AnchorBottom|gui::#tex_AnchorRight)
+        
+    decoTop\SetX(offCorner, GUI::#Anchor_Left, "..")
+    decoTop\SetY(offy, GUI::#Anchor_Top, ".."  )
+    decoTop\SetW(-offCorner, GUI::#Anchor_Right, ".." )
+    decoTop\Seth(Border)
+        
+    decoBot\SetX(offCorner, GUI::#Anchor_Left, "..")
+    decoBot\SetY(offh, GUI::#Anchor_Bottom, ".."  )
+    decoBot\SetW(-offCorner, GUI::#Anchor_Right, ".." )
+    decoBot\Seth(Border)
+    
+    decoLeft\SetX(offx, GUI::#Anchor_Left, "..")
+    decoLeft\SetY(offCorner, GUI::#Anchor_Top, "..")
+    decoLeft\SetW(Border)
+    decoLeft\SetH(-offCorner, GUI::#Anchor_Bottom, "..")
+    
+    decoRight\setx(offw, GUI::#Anchor_Right, "..")
+    decoRight\sety(offCorner, GUI::#Anchor_Top, "..")
+    decoRight\SetW(Border)
+    decoRight\seth(-offCorner, GUI::#Anchor_Bottom, "..")
+    
+    decoLT\SetPosition(#PB_Ignore,#PB_Ignore,Corner,Corner)
+    decoLT\setx(0, GUI::#Anchor_Left, "..Left" )
+    decoLT\sety(0, GUI::#Anchor_Top, "..Top" )
+     
+    decoRT\SetPosition(#PB_Ignore,#PB_Ignore,Corner,Corner)
+    decoRT\setx(-GUI::#Offset_FrameSize, GUI::#Anchor_right, "..Right" )
+    decoRT\sety(0,GUI::#Anchor_top, "..Top" )
+   
+    decoLB\SetPosition(#PB_Ignore,#PB_Ignore,Corner,Corner)
+    decoLB\setx(0, GUI::#Anchor_Left, "..Left" )
+    decoLB\sety(-GUI::#Offset_FrameSize, GUI::#Anchor_Bottom, "..Bottom" )
+     
+    decoRB\SetPosition(#PB_Ignore,#PB_Ignore,Corner,Corner)
+    decoRB\setx(-GUI::#Offset_FrameSize, GUI::#Anchor_right, "..Right" )
+    decoRB\sety(-GUI::#Offset_FrameSize, GUI::#Anchor_Bottom, "..Bottom" )
+       
+    decoMid\setx(0, GUI::#Anchor_Right, "..Left" )
+    decoMid\sety(0, GUI::#Anchor_Bottom, "..Top" )
+    decoMid\setw(0, GUI::#Anchor_Left, "..Right" )
+    decoMid\seth(0, GUI::#Anchor_Top, "..Bottom" )      
+    
+    If flags & #Frame_Sizeable
+      decoTop\SetOn(GUI::#Event_LeftDown, @FrameSize_LeftDown(), GUI::#Size_Top)
+      decoTop\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
+      decoBot\SetOn(GUI::#Event_LeftDown, @FrameSize_LeftDown(), GUI::#Size_Bottom)
+      decoBot\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
+      decoLeft\SetOn(GUI::#Event_LeftDown, @FrameSize_LeftDown(), GUI::#Size_Left)
+      decoLeft\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
+      decoRight\SetOn(GUI::#Event_LeftDown, @FrameSize_LeftDown(), GUI::#Size_Right)
+      decoRight\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
+      decoLT\SetOn(GUI::#Event_LeftDown, @FrameSize_LeftDown(), GUI::#Size_Left | GUI::#Size_Top)
+      decoLT\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
+      decoRT\SetOn(GUI::#Event_LeftDown, @FrameSize_LeftDown(), GUI::#Size_Right | GUI::#Size_Top)
+      decoRT\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
+      decoLB\SetOn(GUI::#Event_LeftDown, @FrameSize_LeftDown(), GUI::#Size_Left | GUI::#Size_Bottom)
+      decoLB\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
+      decoRB\SetOn(GUI::#Event_LeftDown, @FrameSize_LeftDown(), GUI::#Size_Right | GUI::#Size_Bottom)
+      decoRB\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
     EndIf
         
-    If CornerSize<-90
-      CornerSize=BorderSize
-    ElseIf CornerSize<0
-      CornerSize = -CornerSize
-    EndIf
-    
-    If BorderSize < 0.0
-      BorderSize = 0.0
-    ElseIf BorderSize > 1.0
-      BorderSize = 1.0
-    EndIf
-    
-    If CornerSize < 0.0
-      CornerSize = 0.0
-    ElseIf CornerSize > 1.0
-      CornerSize = 1.0
-    EndIf
-    
-    
-    deco=*ele\NewChild("Top", outside | gui::#State_OnBack)
-    deco\SetTexture( *TexFrame, BorderSize,0,   1.0-BorderSize,BorderSize, GUI::#tex_tile)
-    deco\SetPosition(#PB_Ignore, #PB_Ignore, #PB_Ignore, GUI::#Offset_TextureSize)
-    deco\setx(0, GUI::#Anchor_Left, "..")
-    If outside
-      deco\sety(- GUI::#Offset_TextureSize, GUI::#Anchor_top, ".."  )
-    Else
-      deco\sety(0, GUI::#Anchor_top, ".."  )
-    EndIf
-    deco\setw(0, GUI::#Anchor_right, ".." )
-    If sizeable
-      deco\SetOn(GUI::#Event_LeftDown, @FrameSize_LeftDown(), GUI::#Size_Top)
-      deco\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
-    EndIf
-    
-    deco=*ele\NewChild("Bottom", outside | gui::#State_OnBack)
-    deco\SetTexture( *TexFrame, BorderSize,1.0-BorderSize,   1.0-BorderSize,1.0, GUI::#tex_tile)
-    deco\SetPosition(#PB_Ignore,#PB_Ignore,#PB_Ignore,GUI::#Offset_TextureSize)
-    deco\setx(0, GUI::#Anchor_Left, "..")
-    If outside
-      deco\sety(0, GUI::#Anchor_Bottom, ".."  )
-    Else
-      deco\sety(-GUI::#Offset_FrameSize, GUI::#Anchor_Bottom, ".."  )
-    EndIf
-    deco\setw(0, GUI::#Anchor_right, ".." )
-    If sizeable
-      deco\SetOn(GUI::#Event_LeftDown, @FrameSize_LeftDown(), GUI::#Size_Bottom)
-      deco\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
-    EndIf
-    
-    deco=*ele\NewChild("Left", outside | gui::#State_OnBack)
-    deco\SetTexture(*TexFrame, 0, BorderSize,  BorderSize,1.0-BorderSize, GUI::#tex_tile)
-    deco\SetPosition(#PB_Ignore,#PB_Ignore,GUI::#Offset_TextureSize,#PB_Ignore)
-    If outside
-      deco\setx(-GUI::#Offset_FrameSize, GUI::#Anchor_Left, "..")
-    Else
-      deco\setx(0, GUI::#Anchor_Left, "..")
-    EndIf
-    deco\sety(0, GUI::#Anchor_Top, "..")
-    deco\seth(0, GUI::#Anchor_Bottom, "..")
-    If sizeable
-      deco\SetOn(GUI::#Event_LeftDown, @FrameSize_LeftDown(), GUI::#Size_Left)
-      deco\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
-    EndIf
-    
-    deco=*ele\NewChild("Right", outside | gui::#State_OnBack)
-    deco\SetTexture(*TexFrame, 1.0-BorderSize, BorderSize,  1.0,1.0-BorderSize, GUI::#tex_tile)
-    deco\SetPosition(#PB_Ignore,#PB_Ignore,GUI::#Offset_TextureSize,#PB_Ignore)
-    If outside
-      deco\setx(0, GUI::#Anchor_Right, "..")
-    Else
-      deco\setx(-GUI::#Offset_FrameSize, GUI::#Anchor_Right, "..")
-    EndIf
-    deco\sety(0, GUI::#Anchor_Top, "..")
-    deco\seth(0, GUI::#Anchor_Bottom, "..")
-    If sizeable
-      deco\SetOn(GUI::#Event_LeftDown, @FrameSize_LeftDown(), GUI::#Size_Right)
-      deco\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
-    EndIf
-    
-    deco=*ele\NewChild("Mid", outside | gui::#State_OnBack)
-    deco\SetTexture( *TexFrame, CornerSize, CornerSize, 1.0-CornerSize, 1.0-CornerSize, GUI::#tex_tile)
-    deco\setx(0, GUI::#Anchor_Right, "..Left" )
-    deco\sety(0, GUI::#Anchor_Bottom, "..Top" )
-    deco\setw(0, GUI::#Anchor_Left, "..Right" )
-    deco\seth(0, GUI::#Anchor_Top, "..Bottom" )      
-    If moveable
+    If flags & #Frame_Moveable
       *ele\SetOn(GUI::#Event_LeftDown, @FrameMove_LeftDown())
       *ele\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
-    EndIf
-    
-    
-    deco=*ele\NewChild("LeftTop", outside | gui::#State_OnBack)
-    deco\SetTexture( *TexFrame, 0, 0, CornerSize, CornerSize)
-    deco\SetPosition(#PB_Ignore,#PB_Ignore,GUI::#Offset_TextureSize,GUI::#Offset_TextureSize)
-    deco\setx(0, GUI::#Anchor_Left, "..Left" )
-    deco\sety(0, GUI::#Anchor_top, "..Top" )
-    If sizeable
-      deco\SetOn(GUI::#Event_LeftDown, @FrameSize_LeftDown(), GUI::#Size_Left | GUI::#Size_Top)
-      deco\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
-    EndIf
-    
-    deco=*ele\NewChild("RightTop", outside | gui::#State_OnBack)
-    deco\SetTexture( *TexFrame, 1.0-CornerSize, 0, 1.0, CornerSize)
-    deco\SetPosition(#PB_Ignore,#PB_Ignore,GUI::#Offset_TextureSize,GUI::#Offset_TextureSize)
-    deco\setx(-GUI::#Offset_FrameSize, GUI::#Anchor_right, "..Right" )
-    deco\sety(0,GUI::#Anchor_top, "..Top" )
-    If sizeable
-      deco\SetOn(GUI::#Event_LeftDown, @FrameSize_LeftDown(), GUI::#Size_Right | GUI::#Size_Top)
-      deco\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
-    EndIf
-    
-    deco=*ele\NewChild("LeftBottom", outside | gui::#State_OnBack)
-    deco\SetTexture( *TexFrame, 0, 1.0-CornerSize, CornerSize, 1.0)
-    deco\SetPosition(#PB_Ignore,#PB_Ignore,GUI::#Offset_TextureSize,GUI::#Offset_TextureSize)
-    deco\setx(0, GUI::#Anchor_Left, "..Left" )
-    deco\sety(-GUI::#Offset_FrameSize, GUI::#Anchor_Bottom, "..Bottom" )
-    If sizeable
-      deco\SetOn(GUI::#Event_LeftDown, @FrameSize_LeftDown(), GUI::#Size_Left | GUI::#Size_Bottom)
-      deco\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
-    EndIf
-    
-    deco=*ele\NewChild("RightBottom", outside | gui::#State_OnBack)
-    deco\SetTexture( *TexFrame, 1.0-CornerSize, 1.0-CornerSize, 1.0, 1.0)
-    deco\SetPosition(#PB_Ignore,#PB_Ignore,GUI::#Offset_TextureSize,GUI::#Offset_TextureSize)
-    deco\setx(-GUI::#Offset_FrameSize, GUI::#Anchor_right, "..Right" )
-    deco\sety(-GUI::#Offset_FrameSize, GUI::#Anchor_Bottom, "..Bottom" )
-    If sizeable
-      deco\SetOn(GUI::#Event_LeftDown, @FrameSize_LeftDown(), GUI::#Size_Right | GUI::#Size_Bottom)
-      deco\SetOn(GUI::#Event_LeftUp, @FraneStop_OnLeftUp())
     EndIf
     
   EndProcedure
@@ -579,10 +643,13 @@ Global.Renderer::Class Render
 Global.renderer::texture *TexFrame
 Global.renderer::texture *TexButton
 Global.Renderer::Texture *TexSliderHorizontal
+Global.Renderer::Texture *TexSliderVertical
 Global.Gui::Class Gui
 Global.sdl::TTF_Font *font
 Global.gadget::sButtonStyle MyButtonStyle
-Global.gadget::sSliderHorizontalStyle MySliderStyle
+Global.gadget::sSliderStyle MySliderStyleHorizontal
+Global.gadget::sSliderStyle MySliderStyleVertical
+Global.gadget::sFrameStyle MyFrameStyle
 
 #sdl_flags = SDL::#INIT_EVENTS | SDL::#INIT_VIDEO
 #sdl_img_flags = SDL::#IMG_INIT_PNG ; only png (&zip)
@@ -656,12 +723,24 @@ Procedure.l SDL_init()
   EndIf
   
   *TexSliderHorizontal = render\LoadTexture("SliderHorizontal.png",-1,1)
+  If *TexSliderHorizontal = #Null
+    ProcedureReturn #False
+  EndIf
   
+  *TexSliderVertical = render\LoadTexture("SliderVertical.png",-1,1)
+  If *TexSliderVertical = #Null
+    ProcedureReturn #False
+  EndIf
   
   gui = gui::New( render )
   
   Protected ele.gui::frame
   Protected deco.gui::frame
+  
+  MyFrameStyle\Texture = *TexFrame
+  MyFrameStyle\border = -3
+  MyFrameStyle\corner = 5
+    
   
   ele = gui\NewElement("Frame1")  
   ele\setx(30)
@@ -670,7 +749,7 @@ Procedure.l SDL_init()
   ele\seth(100)  
   ele\SetOn(gui::#Event_enter, @OnCallback(),1 )
   ele\SetOn(gui::#Event_leave, @OnCallback(),1 )
-  gadget::CreateFrame(ele,*TexFrame,#False,#True)
+  gadget::CreateFrame(ele, MyFrameStyle, Gadget::#Frame_Moveable | gadget::#Frame_Sizeable)
   ele\SetOn(gui::#Event_LeftClick,@Frame1_OnClick())
   
   ele = ele\NewChild("Frame2")  
@@ -678,7 +757,7 @@ Procedure.l SDL_init()
   ele\sety(20)
   ele\setw(150)
   ele\seth(30)
-  gadget::CreateFrame(ele,*TexFrame,#False,#False,2.0/64.0, 5.0/64.0)
+  gadget::CreateFrame(ele, MyFrameStyle)
   ele\SetOn(gui::#Event_enter, @OnCallback(),2 )
   ele\SetOn(gui::#Event_leave, @OnCallback(),2 )
   
@@ -689,7 +768,7 @@ Procedure.l SDL_init()
   ele\seth(30)
   ele\SetOn(gui::#Event_enter, @OnCallback(),3 )
   ele\SetOn(gui::#Event_leave, @OnCallback(),3 )
-  gadget::CreateFrame(ele,*TexFrame,#True,#True,-2.0/64.0,-5.0/64.0)
+  gadget::CreateFrame(ele, MyFrameStyle, gadget::#Frame_Moveable)
   ele\SetOn(gui::#Event_LeftClick, @Frame3_OnClick() )
   
   deco = ele\NewChild("Text")
@@ -731,17 +810,26 @@ Procedure.l SDL_init()
   ele\seth(5, gui::#Anchor_MaxHeight,".")
   ele\setw(50,gui::#Anchor_MaxWidth,".")
   
-  MySliderStyle\texture = *TexSliderHorizontal
+  MySliderStyleHorizontal\texture = *TexSliderHorizontal
+  MySliderStyleHorizontal\vertical = #False
+  MySliderStyleHorizontal\flipped = #False
   
+  MySliderStyleVertical\texture = *TexSliderVertical
+  MySliderStyleVertical\vertical = #True
+  MySliderStyleVertical\flipped = #True
+     
   Protected.gui::frame slider
   
-  slider = Gadget::SliderHorizontal(ele,10,10,100,16, MySliderStyle, "Volume")
+  slider = Gadget::Slider(ele,10,10,100,16, MySliderStyleHorizontal, "Volume")
   slider\SetX(0, gui::#Anchor_Center,"..")
   slider\SetY(2, gui::#Anchor_Bottom,"..btn3")
   
-  slider\SetUserDataF("Value",0.5)
+  slider\SetUserDataF("Value",0.25)
   slider\SetOn(gui::#Event_LeftClick,@Slider_OnClick())
   
+  slider = Gadget::Slider(ele,10,10,16,100, MySliderStyleVertical, "Sound")
+  slider\SetUserDataF("Value",0.25)
+  slider\SetOn(gui::#Event_LeftClick,@Slider_OnClick())
   
   ProcedureReturn #True
 EndProcedure
@@ -859,7 +947,7 @@ Procedure Main()
 EndProcedure
 Main()
 ; IDE Options = PureBasic 5.72 (Windows - x64)
-; CursorPosition = 722
-; FirstLine = 702
-; Folding = -------
+; CursorPosition = 562
+; FirstLine = 353
+; Folding = -LfAA+-
 ; EnableXP

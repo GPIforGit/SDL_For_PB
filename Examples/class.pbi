@@ -23,11 +23,21 @@ DeclareModule _Class
     *parentFunctions
     ;name.s
   EndStructure
+  
+  CompilerIf #PB_Compiler_Debugger
+    Global.l ObjectCount
+  CompilerEndIf
  
 EndDeclareModule
 ;-
 
 DeclareModule Class
+  CompilerIf #PB_Compiler_Debugger
+    Declare Check()
+  CompilerElse
+    Macro check() : EndMacro
+  CompilerEndIf
+  
   Interface Base
     _new.l()
     _delete()
@@ -69,6 +79,10 @@ DeclareModule Class
       CompilerIf _class::dquote#_extends_#_class::dquote = "Class::Base"
         PokeI(*adr, _type_#_ClassFunctions_)
         If *adr\_new _para_
+          CompilerIf #PB_Compiler_Debugger
+            _Class::ObjectCount +1
+          CompilerEndIf
+          
           ProcedureReturn *adr
         EndIf
         FreeStructure(*adr)
@@ -110,6 +124,9 @@ DeclareModule Class
         
         If *adr
           PokeI(*adr, _type_#_ClassFunctions_)
+          CompilerIf #PB_Compiler_Debugger
+            _Class::ObjectCount +1
+          CompilerEndIf
         EndIf
        
         ProcedureReturn *adr
@@ -260,6 +277,13 @@ EndModule
 ;-
  
 Module Class
+  CompilerIf #PB_Compiler_Debugger
+    Procedure Check()
+      If _Class::ObjectCount
+        Debug "[CLASS] Object Count:" + _class::ObjectCount
+      EndIf
+    EndProcedure
+  CompilerEndIf
   
   Procedure.l base_base(*self.mBase)
     ProcedureReturn #True
@@ -303,6 +327,10 @@ Module Object
      
     PokeI(*obj,#Null)
     FreeStructure(*obj)
+    
+    CompilerIf #PB_Compiler_Debugger
+      _Class::ObjectCount -1
+    CompilerEndIf
  
   EndProcedure
  
@@ -310,10 +338,6 @@ EndModule
 
 ;-
 
-Macro class
-  Runtime 
-EndMacro
- 
 CompilerIf #PB_Compiler_IsMainFile
   OpenConsole()
  
@@ -393,13 +417,13 @@ CompilerIf #PB_Compiler_IsMainFile
   EndStructure
   class::Create( ren2,(),ren::class)
  
-  class Procedure ren2_darum(*self.mRen2)
+  class::Method Procedure ren2_darum(*self.mRen2)
     Debug "darum"
   EndProcedure
-  class Procedure ren2__delete(*self.mRen2)
+  class::Method Procedure ren2__delete(*self.mRen2)
     Debug "Delete ren2 "+*self
   EndProcedure
-  class Procedure ren2_ren2(*self.mRen2)
+  class::Method Procedure ren2_ren2(*self.mRen2)
     Debug "New Ren2:"+*self
     ProcedureReturn #True
   EndProcedure
@@ -419,10 +443,11 @@ CompilerIf #PB_Compiler_IsMainFile
   
   Object::Delete(c4)
   
+  class::check()
   
 CompilerEndIf
 ; IDE Options = PureBasic 5.72 (Windows - x64)
-; CursorPosition = 247
-; FirstLine = 181
-; Folding = -f------
+; CursorPosition = 285
+; FirstLine = 276
+; Folding = ---------
 ; EnableXP

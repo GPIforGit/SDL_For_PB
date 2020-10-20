@@ -36,7 +36,7 @@ DeclareModule GUI
     #tex_AnchorRight = 1<<8
     #tex_AnchorBottom 
   EndEnumeration
-  #mask_tex=$ff
+  
   
   
   Enumeration Class_anchor
@@ -80,7 +80,7 @@ DeclareModule GUI
     #Event_sizing
     #Event_moving
     #Event_StateChange    
-    #Event_Destroy
+    #Event_Delete
     #Event_UserData
     
     #Event_MaxEvent
@@ -101,8 +101,13 @@ DeclareModule GUI
   Prototype _ProtHitboxCallback(what,*frame,dat.i)
   
   ;- Class declarations
+  ;- both
+  Interface _both Extends class::base
+    NewChild(name.s, state.l = 0)
+    GetFrame(name.s)
+  EndInterface   
   ;- -Frame
-  Interface Frame Extends class::Base
+  Interface Frame Extends _both
     SetX(offset.l, anchor.l = #Anchor_None, name.s = "")
     SetY(offset.l, anchor.l = #Anchor_None, name.s = "")
     SetW(offset.l, anchor.l = #Anchor_None, name.s = "")
@@ -131,24 +136,22 @@ DeclareModule GUI
     GetUserDataF.f(name.s)
     SetUserDataS(name.s,value.s,silent=#False)
     GetUserDataS.s(name.s)
-    GetFrame(name.s)
+    
   
     SetTexture(*rendererTexture,x1.f,y1.f,x2.f,y2.f,style.l=#tex_stretch)
     SetText(*font,text.s,colorRGBA,style.l=#tex_stretch)
     GetTextTexture(*font,text.s,colorRGBA,style.l)
     
     GetParent()
-    NewChild(name.s, state.l = 0)
+    
     SortUp()
     
   EndInterface
   
   ;- -Class
   
-  Interface Class Extends class::Base
-    NewElement(name.s, state.l = 0)
+  Interface Class Extends _both
     Draw()
-    GetFrame(name.s)
     ReCalculate()
     GetHit(*sdlpoint, MouseButton.l, MouseClicks.l)    
   EndInterface  
@@ -164,6 +167,7 @@ EndDeclareModule
 ;-
 Module GUI
   #BaseElementName = "/"
+  #mask_tex=$ff
   
   Structure sUserData_base
     name.s
@@ -802,11 +806,17 @@ Module GUI
   
   ;-
   class::Method Procedure Frame_Frame(*self.mFrame, *Class, name.s)
+    Static count
     ;Debug "[Frame] VIRTUAL CLASS!"
     *self\MinHeight = 10
     *self\MaxHeight = #Offset_SpecialStart-1
     *self\MinWidth = 10
     *self\MaxWidth = #Offset_SpecialStart-1
+    
+    If name=""
+      name="Frame_"+count
+      count+1
+    EndIf
     
     *self\name=name
     *self\mClass = *Class
@@ -814,7 +824,7 @@ Module GUI
   EndProcedure
   
   class::Method Procedure Frame__Delete(*self.mFrame)    
-    Frame__CallEventCallback(*self, #Event_Destroy)
+    Frame__CallEventCallback(*self, #Event_Delete)
     
     Frame__FreeTexture(*self)
     
@@ -1238,7 +1248,7 @@ Module GUI
     Object::Delete( *self\baseElement )
   EndProcedure
   
-  class::Method Procedure.l Class_NewElement(*self.mClass, name.s, state.l)
+  class::Method Procedure.l Class_NewChild(*self.mClass, name.s, state.l)
     ProcedureReturn Frame_NewChild( *self\baseElement, name.s, state)
   EndProcedure
   
@@ -1538,6 +1548,7 @@ Module GUI
   
 EndModule
 ; IDE Options = PureBasic 5.72 (Windows - x64)
-; CursorPosition = 11
+; CursorPosition = 1546
+; FirstLine = 1509
 ; Folding = ------------
 ; EnableXP

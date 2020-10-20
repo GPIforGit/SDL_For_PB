@@ -133,37 +133,45 @@ Module renderer
     w.l
     h.l
     clip.sdl::rect
-    *nextTextureObj.mTexture
+    CompilerIf #PB_Compiler_Debugger
+      *nextTextureObj.mTexture
+    CompilerEndIf
   EndStructure
   
   
   class::Create( Texture,(*render,*texture) )
   class::Create( Class, (Titel.s, x.l, y.l, w.l, h.l, winFlag.l, renFlags.l) )
   
-  Procedure Class__AddTextureList(*self.mClass,*tex.mTexture)
-    *tex\nextTextureObj = *self\firstTextureObj
-    *self\firstTextureObj = *tex
-  EndProcedure
+  CompilerIf #PB_Compiler_Debugger
+    Procedure Class__AddTextureList(*self.mClass,*tex.mTexture)
+      *tex\nextTextureObj = *self\firstTextureObj
+      *self\firstTextureObj = *tex
+    EndProcedure
   
-  Procedure Class__DelTextureList(*self.mClass,*tex.mTexture)
-    Protected.mTexture *cur = *self\firstTextureObj
-    
-    If *cur = *tex
-      *self\firstTextureObj = *tex\nextTextureObj
+  
+    Procedure Class__DelTextureList(*self.mClass,*tex.mTexture)
+      Protected.mTexture *cur = *self\firstTextureObj
       
-    Else
+      If *cur = *tex
+        *self\firstTextureObj = *tex\nextTextureObj
+        
+      Else
+        
+        While *cur
+          If *cur\nextTextureObj = *tex
+            *cur\nextTextureObj = *tex\nextTextureObj
+            Break
+          EndIf    
+          *cur = *cur\nextTextureObj
+        Wend
+        
+      EndIf  
       
-      While *cur
-        If *cur\nextTextureObj = *tex
-          *cur\nextTextureObj = *tex\nextTextureObj
-          Break
-        EndIf    
-        *cur = *cur\nextTextureObj
-      Wend
-      
-    EndIf  
-    
-  EndProcedure
+    EndProcedure
+  CompilerElse
+    Macro Class__AddTextureList(self,tex) : EndMacro
+    Macro Class__DelTextureList(self,tex) : EndMacro
+  CompilerEndIf
   
   class::Method Procedure.l Texture_Texture(*self.mTexture, *render,*texture)
     If *texture = #Null
@@ -277,13 +285,15 @@ Module renderer
     Protected *cur.mTexture, *thisCur.Texture
     
     ; unload textures!
-    *cur = *self\firstTextureObj
-    While *cur
-      *thisCur=*cur
-      *cur = *cur\nextTextureObj
-      Debug "FOUND UNDELETED TEXTURE OBJECT!"
-      Object::Delete(*thisCur)
-    Wend      
+    CompilerIf #PB_Compiler_Debugger
+      *cur = *self\firstTextureObj
+      While *cur
+        *thisCur=*cur
+        *cur = *cur\nextTextureObj
+        Debug "FOUND UNDELETED TEXTURE OBJECT!"
+        Object::Delete(*thisCur)
+      Wend      
+    CompilerEndIf
     
     If *self\targetTexture
       SDL::DestroyTexture(*self\targetTexture)
@@ -857,7 +867,7 @@ EndModule
 
 
 ; IDE Options = PureBasic 5.72 (Windows - x64)
-; CursorPosition = 579
-; FirstLine = 568
-; Folding = ------------
+; CursorPosition = 172
+; FirstLine = 142
+; Folding = -------------
 ; EnableXP

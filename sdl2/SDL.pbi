@@ -66,6 +66,13 @@
 ;   Because PB is unicode by default, I renamed the original TTF_RenderText*() to TTF_RenderASCII*() and TTF_RenderUnicode*() to TTF_RenderText*()
 ;
 DeclareModule SDL
+  ;from SDL_version.h.pbi
+  Macro VERSIONNUM(X, Y, Z): ((X)*1000 + (Y)*100 + (Z)) :EndMacro
+  Macro VERSION_ATLEAST(X, Y, Z): (sdl::#COMPILEDVERSION >= sdl::VERSIONNUM(X, Y, Z)) :EndMacro
+  #MAJOR_VERSION = 2
+  #MINOR_VERSION = 0
+  #PATCHLEVEL = 12
+  #COMPILEDVERSION = VERSIONNUM(#MAJOR_VERSION,#MINOR_VERSION,#PATCHLEVEL)
   ;{
   #SDL_USE_IMAGE=Defined(SDL_USE_IMAGE,#PB_Module)
   #SDL_USE_MIXER=Defined(SDL_USE_MIXER,#PB_Module)
@@ -196,9 +203,11 @@ ImportC #SDL2_lib
   calloc.r_void(nmemb.size_t, size.size_t) As #FuncPrefix + "SDL_calloc"
   realloc.r_void(*mem.pvoid, size.size_t) As #FuncPrefix + "SDL_realloc"
   free.void(*mem.pvoid) As #FuncPrefix + "SDL_free"
-  GetMemoryFunctions.void(*ppmallocfunc.malloc_func, *ppcallocfunc.calloc_func, *ppreallocfunc.realloc_func, *ppfreefunc.free_func) As #FuncPrefix + "SDL_GetMemoryFunctions"
-  SetMemoryFunctions.int(*mallocfunc.malloc_func, *callocfunc.calloc_func, *reallocfunc.realloc_func, *freefunc.free_func) As #FuncPrefix + "SDL_SetMemoryFunctions"
-  GetNumAllocations.int() As #FuncPrefix + "SDL_GetNumAllocations"
+  CompilerIf VERSION_ATLEAST(2,0,7)
+    GetMemoryFunctions.void(*ppmallocfunc.malloc_func, *ppcallocfunc.calloc_func, *ppreallocfunc.realloc_func, *ppfreefunc.free_func) As #FuncPrefix + "SDL_GetMemoryFunctions"
+    SetMemoryFunctions.int(*mallocfunc.malloc_func, *callocfunc.calloc_func, *reallocfunc.realloc_func, *freefunc.free_func) As #FuncPrefix + "SDL_SetMemoryFunctions"
+    GetNumAllocations.int() As #FuncPrefix + "SDL_GetNumAllocations"
+  CompilerEndIf
   _getenv.r_ascii(name . p-ascii ) As #FuncPrefix + "SDL_getenv"
   Macro getenv(a) : SDL::_GetAscii(SDL::_getenv(a)) : EndMacro
   setenv.int(name.p-ascii, value.p-ascii, overwrite.int) As #FuncPrefix + "SDL_setenv"
@@ -252,8 +261,10 @@ EndStructure
 Macro AssertionHandler: integer :EndMacro;AssertionHandler.enum( *data.AssertData, *userdata.pvoid)
 ImportC #SDL2_lib
   SetAssertionHandler.void(*handler.AssertionHandler, *userdata.pvoid) As #FuncPrefix + "SDL_SetAssertionHandler"
-  GetDefaultAssertionHandler.r_AssertionHandler() As #FuncPrefix + "SDL_GetDefaultAssertionHandler"
-  GetAssertionHandler.r_AssertionHandler(*ppuserdata.pvoid) As #FuncPrefix + "SDL_GetAssertionHandler"
+  CompilerIf VERSION_ATLEAST(2,0,2)
+    GetDefaultAssertionHandler.r_AssertionHandler() As #FuncPrefix + "SDL_GetDefaultAssertionHandler"
+    GetAssertionHandler.r_AssertionHandler(*ppuserdata.pvoid) As #FuncPrefix + "SDL_GetAssertionHandler"
+  CompilerEndIf
   GetAssertionReport.r_AssertData() As #FuncPrefix + "SDL_GetAssertionReport"
   ResetAssertionReport.void() As #FuncPrefix + "SDL_ResetAssertionReport"
   Macro TriggerBreakpoint() : CallDebugger : EndMacro
@@ -380,12 +391,16 @@ ImportC #SDL2_lib
   AtomicLock.void(*lock.pSpinLock) As #FuncPrefix + "SDL_AtomicLock"
   AtomicUnlock.void(*lock.pSpinLock) As #FuncPrefix + "SDL_AtomicUnlock"
   AtomicCAS.t_bool(*a.atomic_t, oldval.int, newval.int) As #FuncPrefix + "SDL_AtomicCAS"
-  AtomicSet.int(*a.atomic_t, v.int) As #FuncPrefix + "SDL_AtomicSet"
-  AtomicGet.int(*a.atomic_t) As #FuncPrefix + "SDL_AtomicGet"
-  AtomicAdd.int(*a.atomic_t, v.int) As #FuncPrefix + "SDL_AtomicAdd"
+  CompilerIf VERSION_ATLEAST(2,0,2)
+    AtomicSet.int(*a.atomic_t, v.int) As #FuncPrefix + "SDL_AtomicSet"
+    AtomicGet.int(*a.atomic_t) As #FuncPrefix + "SDL_AtomicGet"
+    AtomicAdd.int(*a.atomic_t, v.int) As #FuncPrefix + "SDL_AtomicAdd"
+  CompilerEndIf
   AtomicCASPtr.t_bool(*ppa.pvoid, *oldval.pvoid, *newval.pvoid) As #FuncPrefix + "SDL_AtomicCASPtr"
-  AtomicSetPtr.r_void(*ppa.pvoid, *v.pvoid) As #FuncPrefix + "SDL_AtomicSetPtr"
-  AtomicGetPtr.r_void(*ppa.pvoid) As #FuncPrefix + "SDL_AtomicGetPtr"
+  CompilerIf VERSION_ATLEAST(2,0,2)
+    AtomicSetPtr.r_void(*ppa.pvoid, *v.pvoid) As #FuncPrefix + "SDL_AtomicSetPtr"
+    AtomicGetPtr.r_void(*ppa.pvoid) As #FuncPrefix + "SDL_AtomicGetPtr"
+  CompilerEndIf
   Macro AtomicIncRef(a): SDL::AtomicAdd(a, 1) :EndMacro
   Macro AtomicDecRef(a): Bool(SDL::AtomicAdd(a, -1) = 1) :EndMacro
   ;}
@@ -506,20 +521,26 @@ Enumeration ThreadPriority
   #THREAD_PRIORITY_LOW
   #THREAD_PRIORITY_NORMAL_
   #THREAD_PRIORITY_HIGH
-  #THREAD_PRIORITY_TIME_CRITICAL_
+  CompilerIf VERSION_ATLEAST(2,0,9)
+    #THREAD_PRIORITY_TIME_CRITICAL_
+  CompilerEndIf
 EndEnumeration
 #PASSED_BEGINTHREAD_ENDTHREAD = #True
 CompilerIf #PB_Compiler_OS = #PB_OS_Windows
   ImportC #libSDL2_PB_HelperLib_a
     _CreateThread.r_Thread(*fn.ThreadFunction, name.p-ascii, *data.pvoid) As #FuncPrefix + "_Helper_CreateThread"
     Macro CreateThread(fn, name, dat): SDL::_CreateThread(fn, name, dat) :EndMacro
-    CreateThreadWithStackSize.r_Thread(*fn.ThreadFunction, name.p-ascii, stacksize.size_t, *data.pvoid) As #FuncPrefix + "_Helper_CreateThreadWithStackSize"
+    CompilerIf VERSION_ATLEAST(2,0,9)
+      CreateThreadWithStackSize.r_Thread(*fn.ThreadFunction, name.p-ascii, stacksize.size_t, *data.pvoid) As #FuncPrefix + "_Helper_CreateThreadWithStackSize"
+    CompilerEndIf
   EndImport
 CompilerElse
   ImportC #SDL2_lib
     _CreateThread.r_Thread(*fn.ThreadFunction, *name.p-ascii, *data.pvoid) As #FuncPrefix + "SDL_CreateThread"
     Macro CreateThread(fn, name, dat): SDL::_CreateThread(fn, name, dat) :EndMacro
-    CreateThreadWithStackSize.r_Thread(*fn.ThreadFunction, *name.p-ascii, stacksize.size_t, *data.pvoid) As #FuncPrefix + "SDL_CreateThreadWithStackSize"
+    CompilerIf VERSION_ATLEAST(2,0,9)
+      CreateThreadWithStackSize.r_Thread(*fn.ThreadFunction, *name.p-ascii, stacksize.size_t, *data.pvoid) As #FuncPrefix + "SDL_CreateThreadWithStackSize"
+    CompilerEndIf
   EndImport
 CompilerEndIf
 ImportC #SDL2_lib
@@ -531,7 +552,9 @@ ImportC #SDL2_lib
   SetThreadPriority.int(priority.enum) As #FuncPrefix + "SDL_SetThreadPriority"
   _WaitThread.void(*thread.thread, *status.pint) As #FuncPrefix + "SDL_WaitThread"
   Macro WaitThread(thread,status): SDL::_WaitThread(thread,status) :EndMacro
-  DetachThread.void(*thread.thread) As #FuncPrefix + "SDL_DetachThread"
+  CompilerIf VERSION_ATLEAST(2,0,2)
+    DetachThread.void(*thread.thread) As #FuncPrefix + "SDL_DetachThread"
+  CompilerEndIf
   TLSCreate.t_TLSID() As #FuncPrefix + "SDL_TLSCreate"
   TLSGet.r_void(id.t_TLSID) As #FuncPrefix + "SDL_TLSGet"
   TLSSet.int(id.t_TLSID, *value.pvoid, *destructor) As #FuncPrefix + "SDL_TLSSet"; destructor.void(*data.pvoid)
@@ -593,14 +616,20 @@ ImportC #SDL2_lib
   RWFromConstMem.r_RWops(*mem.pvoid, size.int) As #FuncPrefix + "SDL_RWFromConstMem"
   AllocRW.r_RWops() As #FuncPrefix + "SDL_AllocRW"
   FreeRW.void(*area.RWops) As #FuncPrefix + "SDL_FreeRW"
-  RWsize.Sint64(*context.RWops) As #FuncPrefix + "SDL_RWsize"
-  RWseek.Sint64(*context.RWops, offset.Sint64, whence.int) As #FuncPrefix + "SDL_RWseek"
-  RWtell.Sint64(*context.RWops) As #FuncPrefix + "SDL_RWtell"
-  RWread.size_t(*context.RWops, *ptr.pvoid, size.size_t, maxnum.size_t) As #FuncPrefix + "SDL_RWread"
-  RWwrite.size_t(*context.RWops, *ptr.pvoid, size.size_t, num.size_t) As #FuncPrefix + "SDL_RWwrite"
-  RWclose.int(*context.RWops) As #FuncPrefix + "SDL_RWclose"
-  LoadFile_RW.r_void(*src.RWops, *datasize.psize_t, freesrc.int) As #FuncPrefix + "SDL_LoadFile_RW"
-  LoadFile.r_void(file.p-utf8, *datasize.psize_t) As #FuncPrefix + "SDL_LoadFile"
+  CompilerIf VERSION_ATLEAST(2,0,10)
+    RWsize.Sint64(*context.RWops) As #FuncPrefix + "SDL_RWsize"
+    RWseek.Sint64(*context.RWops, offset.Sint64, whence.int) As #FuncPrefix + "SDL_RWseek"
+    RWtell.Sint64(*context.RWops) As #FuncPrefix + "SDL_RWtell"
+    RWread.size_t(*context.RWops, *ptr.pvoid, size.size_t, maxnum.size_t) As #FuncPrefix + "SDL_RWread"
+    RWwrite.size_t(*context.RWops, *ptr.pvoid, size.size_t, num.size_t) As #FuncPrefix + "SDL_RWwrite"
+    RWclose.int(*context.RWops) As #FuncPrefix + "SDL_RWclose"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,6)
+    LoadFile_RW.r_void(*src.RWops, *datasize.psize_t, freesrc.int) As #FuncPrefix + "SDL_LoadFile_RW"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,10)
+    LoadFile.r_void(file.p-utf8, *datasize.psize_t) As #FuncPrefix + "SDL_LoadFile"
+  CompilerEndIf
   ReadU8.Uint8(*src.RWops) As #FuncPrefix + "SDL_ReadU8"
   ReadLE16.Uint16(*src.RWops) As #FuncPrefix + "SDL_ReadLE16"
   ReadBE16.Uint16(*src.RWops) As #FuncPrefix + "SDL_ReadBE16"
@@ -653,8 +682,12 @@ CompilerEndIf
 #AUDIO_ALLOW_FREQUENCY_CHANGE = $00000001
 #AUDIO_ALLOW_FORMAT_CHANGE = $00000002
 #AUDIO_ALLOW_CHANNELS_CHANGE = $00000004
-#AUDIO_ALLOW_SAMPLES_CHANGE = $00000008
-#AUDIO_ALLOW_ANY_CHANGE =(#AUDIO_ALLOW_FREQUENCY_CHANGE|#AUDIO_ALLOW_FORMAT_CHANGE|#AUDIO_ALLOW_CHANNELS_CHANGE|#AUDIO_ALLOW_SAMPLES_CHANGE)
+CompilerIf VERSION_ATLEAST(2,0,9)
+  #AUDIO_ALLOW_SAMPLES_CHANGE = $00000008
+  #AUDIO_ALLOW_ANY_CHANGE =(#AUDIO_ALLOW_FREQUENCY_CHANGE|#AUDIO_ALLOW_FORMAT_CHANGE|#AUDIO_ALLOW_CHANNELS_CHANGE|#AUDIO_ALLOW_SAMPLES_CHANGE)
+CompilerElse
+  #AUDIO_ALLOW_ANY_CHANGE =(#AUDIO_ALLOW_FREQUENCY_CHANGE|#AUDIO_ALLOW_FORMAT_CHANGE|#AUDIO_ALLOW_CHANNELS_CHANGE)
+CompilerEndIf
 #AUDIOCVT_MAX_FILTERS = 9
 Enumeration AudioStatus
   #AUDIO_STOPPED=0
@@ -668,8 +701,10 @@ Macro pAudioFormat: pUint16  :EndMacro
 Macro pAudioDeviceID : pUint32 :EndMacro
 Macro AudioCallback: integer :EndMacro; AudioCallback.void ( *userdata,pvoid, *stream.pUint8, len.int)
 Macro AudioFilter: integer :EndMacro  ; AudioFilter.void (*cvt.pAudioCVT, format.AudioFormat)
-Structure AudioStream:EndStructure
-Macro r_AudioStream: i :EndMacro
+CompilerIf VERSION_ATLEAST(2,0,7)
+  Structure AudioStream:EndStructure
+  Macro r_AudioStream: i :EndMacro
+CompilerEndIf
 Structure AudioSpec Align #SDLALIGN
   freq.int 
   format.t_AudioFormat 
@@ -725,19 +760,27 @@ ImportC #SDL2_lib
   FreeWAV.void(*audio_buf.pUint8) As #FuncPrefix + "SDL_FreeWAV"
   BuildAudioCVT.int(*cvt.AudioCVT, src_format.t_AudioFormat, src_channels.Uint8, src_rate.int, dst_format.t_AudioFormat, dst_channels.Uint8, dst_rate.int) As #FuncPrefix + "SDL_BuildAudioCVT"
   ConvertAudio.int(*cvt.AudioCVT) As #FuncPrefix + "SDL_ConvertAudio"
-  NewAudioStream.r_AudioStream(src_format.t_AudioFormat, src_channels.Uint8, src_rate.int, dst_format.t_AudioFormat, dst_channels.Uint8, dst_rate.int) As #FuncPrefix + "SDL_NewAudioStream"
-  AudioStreamPut.int(*stream.AudioStream, *buf.pvoid, len.int) As #FuncPrefix + "SDL_AudioStreamPut"
-  AudioStreamGet.int(*stream.AudioStream, *buf.pvoid, len.int) As #FuncPrefix + "SDL_AudioStreamGet"
-  AudioStreamAvailable.int(*stream.AudioStream) As #FuncPrefix + "SDL_AudioStreamAvailable"
-  AudioStreamFlush.int(*stream.AudioStream) As #FuncPrefix + "SDL_AudioStreamFlush"
-  AudioStreamClear.void(*stream.AudioStream) As #FuncPrefix + "SDL_AudioStreamClear"
-  FreeAudioStream.void(*stream.AudioStream) As #FuncPrefix + "SDL_FreeAudioStream"
+  CompilerIf VERSION_ATLEAST(2,0,7)
+    NewAudioStream.r_AudioStream(src_format.t_AudioFormat, src_channels.Uint8, src_rate.int, dst_format.t_AudioFormat, dst_channels.Uint8, dst_rate.int) As #FuncPrefix + "SDL_NewAudioStream"
+    AudioStreamPut.int(*stream.AudioStream, *buf.pvoid, len.int) As #FuncPrefix + "SDL_AudioStreamPut"
+    AudioStreamGet.int(*stream.AudioStream, *buf.pvoid, len.int) As #FuncPrefix + "SDL_AudioStreamGet"
+    AudioStreamAvailable.int(*stream.AudioStream) As #FuncPrefix + "SDL_AudioStreamAvailable"
+    AudioStreamFlush.int(*stream.AudioStream) As #FuncPrefix + "SDL_AudioStreamFlush"
+    AudioStreamClear.void(*stream.AudioStream) As #FuncPrefix + "SDL_AudioStreamClear"
+    FreeAudioStream.void(*stream.AudioStream) As #FuncPrefix + "SDL_FreeAudioStream"
+  CompilerEndIf
   MixAudio.void(*dst.pUint8, *src.pUint8, len.Uint32, volume.int) As #FuncPrefix + "SDL_MixAudio"
   MixAudioFormat.void(*dst.pUint8, *src.pUint8, format.t_AudioFormat, len.Uint32, volume.int) As #FuncPrefix + "SDL_MixAudioFormat"
-  QueueAudio.int(dev.t_AudioDeviceID, *data.pvoid, len.Uint32) As #FuncPrefix + "SDL_QueueAudio"
-  DequeueAudio.Uint32(dev.t_AudioDeviceID, *data.pvoid, len.Uint32) As #FuncPrefix + "SDL_DequeueAudio"
-  GetQueuedAudioSize.Uint32(dev.t_AudioDeviceID) As #FuncPrefix + "SDL_GetQueuedAudioSize"
-  ClearQueuedAudio.void(dev.t_AudioDeviceID) As #FuncPrefix + "SDL_ClearQueuedAudio"
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    QueueAudio.int(dev.t_AudioDeviceID, *data.pvoid, len.Uint32) As #FuncPrefix + "SDL_QueueAudio"
+  CompilerEndIf  
+  CompilerIf VERSION_ATLEAST(2,0,5)
+    DequeueAudio.Uint32(dev.t_AudioDeviceID, *data.pvoid, len.Uint32) As #FuncPrefix + "SDL_DequeueAudio"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    GetQueuedAudioSize.Uint32(dev.t_AudioDeviceID) As #FuncPrefix + "SDL_GetQueuedAudioSize"
+    ClearQueuedAudio.void(dev.t_AudioDeviceID) As #FuncPrefix + "SDL_ClearQueuedAudio"
+  CompilerEndIf
   LockAudio.void() As #FuncPrefix + "SDL_LockAudio"
   LockAudioDevice.void(dev.t_AudioDeviceID) As #FuncPrefix + "SDL_LockAudioDevice"
   UnlockAudio.void() As #FuncPrefix + "SDL_UnlockAudio"
@@ -776,15 +819,29 @@ ImportC #SDL2_lib
   HasSSE3.t_bool() As #FuncPrefix + "SDL_HasSSE3"
   HasSSE41.t_bool() As #FuncPrefix + "SDL_HasSSE41"
   HasSSE42.t_bool() As #FuncPrefix + "SDL_HasSSE42"
-  HasAVX.t_bool() As #FuncPrefix + "SDL_HasAVX"
-  HasAVX2.t_bool() As #FuncPrefix + "SDL_HasAVX2"
-  HasAVX512F.t_bool() As #FuncPrefix + "SDL_HasAVX512F"
-  HasARMSIMD.t_bool() As #FuncPrefix + "SDL_HasARMSIMD"
-  HasNEON.t_bool() As #FuncPrefix + "SDL_HasNEON"
-  GetSystemRAM.int() As #FuncPrefix + "SDL_GetSystemRAM"
-  SIMDGetAlignment.size_t() As #FuncPrefix + "SDL_SIMDGetAlignment"
-  SIMDAlloc.r_void(len.size_t) As #FuncPrefix + "SDL_SIMDAlloc"
-  SIMDFree.void(*ptr.pvoid) As #FuncPrefix + "SDL_SIMDFree"
+  CompilerIf VERSION_ATLEAST(2,0,2)
+    HasAVX.t_bool() As #FuncPrefix + "SDL_HasAVX"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    HasAVX2.t_bool() As #FuncPrefix + "SDL_HasAVX2"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,9)
+    HasAVX512F.t_bool() As #FuncPrefix + "SDL_HasAVX512F"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,12)
+    HasARMSIMD.t_bool() As #FuncPrefix + "SDL_HasARMSIMD"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,6)
+    HasNEON.t_bool() As #FuncPrefix + "SDL_HasNEON"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,1)
+    GetSystemRAM.int() As #FuncPrefix + "SDL_GetSystemRAM"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,10)
+    SIMDGetAlignment.size_t() As #FuncPrefix + "SDL_SIMDGetAlignment"
+    SIMDAlloc.r_void(len.size_t) As #FuncPrefix + "SDL_SIMDAlloc"
+    SIMDFree.void(*ptr.pvoid) As #FuncPrefix + "SDL_SIMDFree"
+  CompilerEndIf
 EndImport
 ;}
 ;-----------------------
@@ -1060,30 +1117,38 @@ Enumeration BlendMode
   #BLENDMODE_BLEND = $00000001
   #BLENDMODE_ADD = $00000002
   #BLENDMODE_MOD = $00000004
-  #BLENDMODE_MUL = $00000008
-  #BLENDMODE_INVALID = $7FFFFFFF
+  CompilerIf VERSION_ATLEAST(2,0,12)
+    #BLENDMODE_MUL = $00000008
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,6)
+    #BLENDMODE_INVALID = $7FFFFFFF
+  CompilerEndIf  
 EndEnumeration
-Enumeration BlendOperation
-  #BLENDOPERATION_ADD = $1
-  #BLENDOPERATION_SUBTRACT = $2
-  #BLENDOPERATION_REV_SUBTRACT = $3
-  #BLENDOPERATION_MINIMUM = $4
-  #BLENDOPERATION_MAXIMUM = $5
-EndEnumeration
-Enumeration BlendFactor
-  #BLENDFACTOR_ZERO = $1
-  #BLENDFACTOR_ONE = $2
-  #BLENDFACTOR_SRC_COLOR = $3
-  #BLENDFACTOR_ONE_MINUS_SRC_COLOR = $4
-  #BLENDFACTOR_SRC_ALPHA = $5
-  #BLENDFACTOR_ONE_MINUS_SRC_ALPHA = $6
-  #BLENDFACTOR_DST_COLOR = $7
-  #BLENDFACTOR_ONE_MINUS_DST_COLOR = $8
-  #BLENDFACTOR_DST_ALPHA = $9
-  #BLENDFACTOR_ONE_MINUS_DST_ALPHA = $A
-EndEnumeration
+CompilerIf VERSION_ATLEAST(2,0,6)
+  Enumeration BlendOperation
+    #BLENDOPERATION_ADD = $1
+    #BLENDOPERATION_SUBTRACT = $2
+    #BLENDOPERATION_REV_SUBTRACT = $3
+    #BLENDOPERATION_MINIMUM = $4
+    #BLENDOPERATION_MAXIMUM = $5
+  EndEnumeration
+  Enumeration BlendFactor
+    #BLENDFACTOR_ZERO = $1
+    #BLENDFACTOR_ONE = $2
+    #BLENDFACTOR_SRC_COLOR = $3
+    #BLENDFACTOR_ONE_MINUS_SRC_COLOR = $4
+    #BLENDFACTOR_SRC_ALPHA = $5
+    #BLENDFACTOR_ONE_MINUS_SRC_ALPHA = $6
+    #BLENDFACTOR_DST_COLOR = $7
+    #BLENDFACTOR_ONE_MINUS_DST_COLOR = $8
+    #BLENDFACTOR_DST_ALPHA = $9
+    #BLENDFACTOR_ONE_MINUS_DST_ALPHA = $A
+  EndEnumeration
+CompilerEndIf
 ImportC #SDL2_lib
-  ComposeCustomBlendMode.enum(srcColorFactor.enum, dstColorFactor.enum, colorOperation.enum, srcAlphaFactor.enum, dstAlphaFactor.enum, alphaOperation.enum) As #FuncPrefix + "SDL_ComposeCustomBlendMode"
+  CompilerIf VERSION_ATLEAST(2,0,6)
+    ComposeCustomBlendMode.enum(srcColorFactor.enum, dstColorFactor.enum, colorOperation.enum, srcAlphaFactor.enum, dstAlphaFactor.enum, alphaOperation.enum) As #FuncPrefix + "SDL_ComposeCustomBlendMode"
+  CompilerEndIf
 EndImport
 ;}
 ;-----------------------
@@ -1098,13 +1163,17 @@ Macro WINDOWPOS_ISCENTERED(X):  Bool(((X)&$FFFF0000) = SDL::#WINDOWPOS_CENTERED_
 #PREALLOC = $00000001
 #RLEACCEL = $00000002
 #DONTFREE = $00000004
-#SIMD_ALIGNED = $00000008
-Enumeration YUV_CONVERSION_MODE
-  #YUV_CONVERSION_JPEG
-  #YUV_CONVERSION_BT601
-  #YUV_CONVERSION_BT709
-  #YUV_CONVERSION_AUTOMATIC
-EndEnumeration
+CompilerIf VERSION_ATLEAST(2,0,10)
+  #SIMD_ALIGNED = $00000008
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,8)
+  Enumeration YUV_CONVERSION_MODE
+    #YUV_CONVERSION_JPEG
+    #YUV_CONVERSION_BT601
+    #YUV_CONVERSION_BT709
+    #YUV_CONVERSION_AUTOMATIC
+  EndEnumeration
+CompilerEndIf
 Structure Surface Align #SDLALIGN
   flags.Uint32
   *format.PixelFormat
@@ -1123,9 +1192,13 @@ Macro r_Surface: i :EndMacro
 Macro blit: integer :EndMacro ;  blit.int(*src.surface, *srcrect.rect, *dst.surface, *dstrect.rect);
 ImportC #SDL2_lib
   CreateRGBSurface.r_Surface(flags.Uint32, width.int, height.int, depth.int, Rmask.Uint32, Gmask.Uint32, Bmask.Uint32, Amask.Uint32) As #FuncPrefix + "SDL_CreateRGBSurface"
-  CreateRGBSurfaceWithFormat.r_Surface(flags.Uint32, width.int, height.int, depth.int, format.Uint32) As #FuncPrefix + "SDL_CreateRGBSurfaceWithFormat"
+  CompilerIf VERSION_ATLEAST(2,0,5)
+    CreateRGBSurfaceWithFormat.r_Surface(flags.Uint32, width.int, height.int, depth.int, format.Uint32) As #FuncPrefix + "SDL_CreateRGBSurfaceWithFormat"
+  CompilerEndIf
   CreateRGBSurfaceFrom.r_Surface(*pixels.pvoid, width.int, height.int, depth.int, pitch.int, Rmask.Uint32, Gmask.Uint32, Bmask.Uint32, Amask.Uint32) As #FuncPrefix + "SDL_CreateRGBSurfaceFrom"
-  CreateRGBSurfaceWithFormatFrom.r_Surface(*pixels.pvoid, width.int, height.int, depth.int, pitch.int, format.Uint32) As #FuncPrefix + "SDL_CreateRGBSurfaceWithFormatFrom"
+  CompilerIf VERSION_ATLEAST(2,0,5)
+    CreateRGBSurfaceWithFormatFrom.r_Surface(*pixels.pvoid, width.int, height.int, depth.int, pitch.int, format.Uint32) As #FuncPrefix + "SDL_CreateRGBSurfaceWithFormatFrom"
+  CompilerEndIf
   FreeSurface.void(*surface.Surface) As #FuncPrefix + "SDL_FreeSurface"
   SetSurfacePalette.int(*surface.Surface, *palette.Palette) As #FuncPrefix + "SDL_SetSurfacePalette"
   LockSurface.int(*surface.Surface) As #FuncPrefix + "SDL_LockSurface"
@@ -1134,7 +1207,9 @@ ImportC #SDL2_lib
   SaveBMP_RW.int(*surface.Surface, *dst.RWops, freedst.int) As #FuncPrefix + "SDL_SaveBMP_RW"
   SetSurfaceRLE.int(*surface.Surface, flag.int) As #FuncPrefix + "SDL_SetSurfaceRLE"
   SetColorKey.int(*surface.Surface, flag.int, key.Uint32) As #FuncPrefix + "SDL_SetColorKey"
-  HasColorKey.t_bool(*surface.Surface) As #FuncPrefix + "SDL_HasColorKey"
+  CompilerIf VERSION_ATLEAST(2,0,9)
+    HasColorKey.t_bool(*surface.Surface) As #FuncPrefix + "SDL_HasColorKey"
+  CompilerEndIf
   GetColorKey.int(*surface.Surface, *key.pUint32) As #FuncPrefix + "SDL_GetColorKey"
   SetSurfaceColorMod.int(*surface.Surface, r.Uint8, g.Uint8, b.Uint8) As #FuncPrefix + "SDL_SetSurfaceColorMod"
   GetSurfaceColorMod.int(*surface.Surface, *r.pUint8, *g.pUint8, *b.pUint8) As #FuncPrefix + "SDL_GetSurfaceColorMod"
@@ -1144,7 +1219,9 @@ ImportC #SDL2_lib
   GetSurfaceBlendMode.int(*surface.Surface, *blendMode.penum) As #FuncPrefix + "SDL_GetSurfaceBlendMode"
   SetClipRect.t_bool(*surface.Surface, *rectxx.Rect) As #FuncPrefix + "SDL_SetClipRect"
   GetClipRect.void(*surface.Surface, *rectxx.Rect) As #FuncPrefix + "SDL_GetClipRect"
-  DuplicateSurface.r_Surface(*surface.Surface) As #FuncPrefix + "SDL_DuplicateSurface"
+  CompilerIf VERSION_ATLEAST(2,0,6)
+    DuplicateSurface.r_Surface(*surface.Surface) As #FuncPrefix + "SDL_DuplicateSurface"
+  CompilerEndIf
   ConvertSurface.r_Surface(*src.Surface, *fmt.PixelFormat, flags.Uint32) As #FuncPrefix + "SDL_ConvertSurface"
   ConvertSurfaceFormat.r_Surface(*src.Surface, pixel_format.Uint32, flags.Uint32) As #FuncPrefix + "SDL_ConvertSurfaceFormat"
   ConvertPixels.int(width.int, height.int, src_format.Uint32, *src.pvoid, src_pitch.int, dst_format.Uint32, *dst.pvoid, dst_pitch.int) As #FuncPrefix + "SDL_ConvertPixels"
@@ -1155,9 +1232,11 @@ ImportC #SDL2_lib
   SoftStretch.int(*src.Surface, *srcrect.Rect, *dst.Surface, *dstrect.Rect) As #FuncPrefix + "SDL_SoftStretch"
   UpperBlitScaled.int(*src.Surface, *srcrect.Rect, *dst.Surface, *dstrect.Rect) As #FuncPrefix + "SDL_UpperBlitScaled"
   LowerBlitScaled.int(*src.Surface, *srcrect.Rect, *dst.Surface, *dstrect.Rect) As #FuncPrefix + "SDL_LowerBlitScaled"
-  SetYUVConversionMode.void(mode.enum) As #FuncPrefix + "SDL_SetYUVConversionMode"
-  GetYUVConversionMode.enum() As #FuncPrefix + "SDL_GetYUVConversionMode"
-  GetYUVConversionModeForResolution.enum(width.int, height.int) As #FuncPrefix + "SDL_GetYUVConversionModeForResolution"
+  CompilerIf VERSION_ATLEAST(2,0,8)
+    SetYUVConversionMode.void(mode.enum) As #FuncPrefix + "SDL_SetYUVConversionMode"
+    GetYUVConversionMode.enum() As #FuncPrefix + "SDL_GetYUVConversionMode"
+    GetYUVConversionModeForResolution.enum(width.int, height.int) As #FuncPrefix + "SDL_GetYUVConversionModeForResolution"
+  CompilerEndIf
   Macro LoadBMP(file) : SDL::LoadBMP_RW(SDL::RWFromFile(file, "rb"), 1) :EndMacro
   Macro SaveBMP(surface, file): SDL::SaveBMP_RW(surface, SDL::RWFromFile(file, "wb"), 1) :EndMacro
   Macro BlitSurface(src,srcrect,dst,destrect): SDL::UpperBlit(src,srcrect,dst,destrect) :EndMacro
@@ -1189,14 +1268,22 @@ Enumeration WindowFlags
   #WINDOW_MOUSE_FOCUS=$00000400
   #WINDOW_FULLSCREEN_DESKTOP=(#WINDOW_FULLSCREEN|$00001000)
   #WINDOW_FOREIGN=$00000800
-  #WINDOW_ALLOW_HIGHDPI=$00002000
-  #WINDOW_MOUSE_CAPTURE=$00004000
-  #WINDOW_ALWAYS_ON_TOP=$00008000
-  #WINDOW_SKIP_TASKBAR=$00010000
-  #WINDOW_UTILITY=$00020000
-  #WINDOW_TOOLTIP=$00040000
-  #WINDOW_POPUP_MENU=$00080000
-  #WINDOW_VULKAN=$10000000
+  CompilerIf VERSION_ATLEAST(2,0,1)
+    #WINDOW_ALLOW_HIGHDPI=$00002000
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    #WINDOW_MOUSE_CAPTURE=$00004000
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,5)
+    #WINDOW_ALWAYS_ON_TOP=$00008000
+    #WINDOW_SKIP_TASKBAR=$00010000
+    #WINDOW_UTILITY=$00020000
+    #WINDOW_TOOLTIP=$00040000
+    #WINDOW_POPUP_MENU=$00080000
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,6)
+    #WINDOW_VULKAN=$10000000
+  CompilerEndIf
 EndEnumeration
 #WINDOWPOS_UNDEFINED_MASK = $1FFF0000
 #WINDOWPOS_CENTERED_MASK = $2FFF0000
@@ -1218,20 +1305,24 @@ Enumeration WindowEventID
   #WINDOWEVENT_FOCUS_GAINED
   #WINDOWEVENT_FOCUS_LOST
   #WINDOWEVENT_CLOSE
-  #WINDOWEVENT_TAKE_FOCUS
-  #WINDOWEVENT_HIT_TEST
+  CompilerIf VERSION_ATLEAST(2,0,5)
+    #WINDOWEVENT_TAKE_FOCUS    
+    #WINDOWEVENT_HIT_TEST
+  CompilerEndIf
 EndEnumeration
-Enumeration DisplayEventID
-  #DISPLAYEVENT_NONE
-  #DISPLAYEVENT_ORIENTATION
-EndEnumeration
-Enumeration DisplayOrientation
-  #ORIENTATION_UNKNOWN
-  #ORIENTATION_LANDSCAPE
-  #ORIENTATION_LANDSCAPE_FLIPPED
-  #ORIENTATION_PORTRAIT
-  #ORIENTATION_PORTRAIT_FLIPPED
-EndEnumeration
+CompilerIf VERSION_ATLEAST(2,0,9)
+  Enumeration DisplayEventID
+    #DISPLAYEVENT_NONE
+    #DISPLAYEVENT_ORIENTATION
+  EndEnumeration
+  Enumeration DisplayOrientation
+    #ORIENTATION_UNKNOWN
+    #ORIENTATION_LANDSCAPE
+    #ORIENTATION_LANDSCAPE_FLIPPED
+    #ORIENTATION_PORTRAIT
+    #ORIENTATION_PORTRAIT_FLIPPED
+  EndEnumeration
+CompilerEndIf
 Enumeration GLattr
   #GL_RED_SIZE
   #GL_GREEN_SIZE
@@ -1256,10 +1347,16 @@ Enumeration GLattr
   #GL_CONTEXT_FLAGS
   #GL_CONTEXT_PROFILE_MASK
   #GL_SHARE_WITH_CURRENT_CONTEXT
-  #GL_FRAMEBUFFER_SRGB_CAPABLE
-  #GL_CONTEXT_RELEASE_BEHAVIOR
-  #GL_CONTEXT_RESET_NOTIFICATION
-  #GL_CONTEXT_NO_ERROR
+  CompilerIf VERSION_ATLEAST(2,0,1)
+    #GL_FRAMEBUFFER_SRGB_CAPABLE
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    #GL_CONTEXT_RELEASE_BEHAVIOR
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,6)
+    #GL_CONTEXT_RESET_NOTIFICATION
+    #GL_CONTEXT_NO_ERROR
+  CompilerEndIf
 EndEnumeration
 Enumeration GLprofile
   #GL_CONTEXT_PROFILE_CORE=$0001
@@ -1272,26 +1369,32 @@ Enumeration GLcontextFlag
   #GL_CONTEXT_ROBUST_ACCESS_FLAG=$0004
   #GL_CONTEXT_RESET_ISOLATION_FLAG=$0008
 EndEnumeration
-Enumeration GLcontextReleaseFlag
-  #GL_CONTEXT_RELEASE_BEHAVIOR_NONE=$0000
-  #GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH=$0001
-EndEnumeration
-Enumeration GLContextResetNotification
-  #GL_CONTEXT_RESET_NO_NOTIFICATION=$0000
-  #GL_CONTEXT_RESET_LOSE_CONTEXT=$0001
-EndEnumeration
-Enumeration HitTestResult
-  #HITTEST_NORMAL
-  #HITTEST_DRAGGABLE
-  #HITTEST_RESIZE_TOPLEFT
-  #HITTEST_RESIZE_TOP
-  #HITTEST_RESIZE_TOPRIGHT
-  #HITTEST_RESIZE_RIGHT
-  #HITTEST_RESIZE_BOTTOMRIGHT
-  #HITTEST_RESIZE_BOTTOM
-  #HITTEST_RESIZE_BOTTOMLEFT
-  #HITTEST_RESIZE_LEFT
-EndEnumeration
+CompilerIf VERSION_ATLEAST(2,0,4)
+  Enumeration GLcontextReleaseFlag
+    #GL_CONTEXT_RELEASE_BEHAVIOR_NONE=$0000
+    #GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH=$0001
+  EndEnumeration
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,6)
+  Enumeration GLContextResetNotification
+    #GL_CONTEXT_RESET_NO_NOTIFICATION=$0000
+    #GL_CONTEXT_RESET_LOSE_CONTEXT=$0001
+  EndEnumeration
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,4)
+  Enumeration HitTestResult
+    #HITTEST_NORMAL
+    #HITTEST_DRAGGABLE
+    #HITTEST_RESIZE_TOPLEFT
+    #HITTEST_RESIZE_TOP
+    #HITTEST_RESIZE_TOPRIGHT
+    #HITTEST_RESIZE_RIGHT
+    #HITTEST_RESIZE_BOTTOMRIGHT
+    #HITTEST_RESIZE_BOTTOM
+    #HITTEST_RESIZE_BOTTOMLEFT
+    #HITTEST_RESIZE_LEFT
+  EndEnumeration
+CompilerEndIf
 Structure DisplayMode Align #SDLALIGN
   format.Uint32
   w.int
@@ -1312,9 +1415,15 @@ ImportC #SDL2_lib
   _GetDisplayName.r_utf8(displayIndex.int) As #FuncPrefix + "SDL_GetDisplayName"
   Macro GetDisplayName(index): SDL::_GetUTF8(SDL::_GetDisplayName(index)) :EndMacro
   GetDisplayBounds.int(displayIndex.int, *rectxx.Rect) As #FuncPrefix + "SDL_GetDisplayBounds"
-  GetDisplayUsableBounds.int(displayIndex.int, *rectxx.Rect) As #FuncPrefix + "SDL_GetDisplayUsableBounds"
-  GetDisplayDPI.int(displayIndex.int, *ddpi.pfloat, *hdpi.pfloat, *vdpi.pfloat) As #FuncPrefix + "SDL_GetDisplayDPI"
-  GetDisplayOrientation.enum(displayIndex.int) As #FuncPrefix + "SDL_GetDisplayOrientation"
+  CompilerIf VERSION_ATLEAST(2,0,5)
+    GetDisplayUsableBounds.int(displayIndex.int, *rectxx.Rect) As #FuncPrefix + "SDL_GetDisplayUsableBounds"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    GetDisplayDPI.int(displayIndex.int, *ddpi.pfloat, *hdpi.pfloat, *vdpi.pfloat) As #FuncPrefix + "SDL_GetDisplayDPI"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,9)
+    GetDisplayOrientation.enum(displayIndex.int) As #FuncPrefix + "SDL_GetDisplayOrientation"
+  CompilerEndIf
   GetNumDisplayModes.int(displayIndex.int) As #FuncPrefix + "SDL_GetNumDisplayModes"
   GetDisplayMode.int(displayIndex.int, modeIndex.int, *mode.DisplayMode) As #FuncPrefix + "SDL_GetDisplayMode"
   GetDesktopDisplayMode.int(displayIndex.int, *mode.DisplayMode) As #FuncPrefix + "SDL_GetDesktopDisplayMode"
@@ -1342,13 +1451,17 @@ ImportC #SDL2_lib
   GetWindowPosition.void(*window.Window, *x.pint, *y.pint) As #FuncPrefix + "SDL_GetWindowPosition"
   SetWindowSize.void(*window.Window, w.int, h.int) As #FuncPrefix + "SDL_SetWindowSize"
   GetWindowSize.void(*window.Window, *w.pint, *h.pint) As #FuncPrefix + "SDL_GetWindowSize"
-  GetWindowBordersSize.int(*window.Window, *top.pint, *left.pint, *bottom.pint, *right.pint) As #FuncPrefix + "SDL_GetWindowBordersSize"
+  CompilerIf VERSION_ATLEAST(2,0,5)
+    GetWindowBordersSize.int(*window.Window, *top.pint, *left.pint, *bottom.pint, *right.pint) As #FuncPrefix + "SDL_GetWindowBordersSize"
+  CompilerEndIf
   SetWindowMinimumSize.void(*window.Window, min_w.int, min_h.int) As #FuncPrefix + "SDL_SetWindowMinimumSize"
   GetWindowMinimumSize.void(*window.Window, *w.pint, *h.pint) As #FuncPrefix + "SDL_GetWindowMinimumSize"
   SetWindowMaximumSize.void(*window.Window, max_w.int, max_h.int) As #FuncPrefix + "SDL_SetWindowMaximumSize"
   GetWindowMaximumSize.void(*window.Window, *w.pint, *h.pint) As #FuncPrefix + "SDL_GetWindowMaximumSize"
   SetWindowBordered.void(*window.Window, bordered.t_bool) As #FuncPrefix + "SDL_SetWindowBordered"
-  SetWindowResizable.void(*window.Window, resizable.t_bool) As #FuncPrefix + "SDL_SetWindowResizable"
+  CompilerIf VERSION_ATLEAST(2,0,5)
+    SetWindowResizable.void(*window.Window, resizable.t_bool) As #FuncPrefix + "SDL_SetWindowResizable"
+  CompilerEndIf
   ShowWindow.void(*window.Window) As #FuncPrefix + "SDL_ShowWindow"
   _HideWindow.void(*window.Window) As #FuncPrefix + "SDL_HideWindow"
   Macro HideWindow(window): SDL::_HideWindow(window) :EndMacro
@@ -1362,16 +1475,22 @@ ImportC #SDL2_lib
   UpdateWindowSurfaceRects.int(*window.Window, *rectxs.Rect, numrects.int) As #FuncPrefix + "SDL_UpdateWindowSurfaceRects"
   SetWindowGrab.void(*window.Window, grabbed.t_bool) As #FuncPrefix + "SDL_SetWindowGrab"
   GetWindowGrab.t_bool(*window.Window) As #FuncPrefix + "SDL_GetWindowGrab"
-  GetGrabbedWindow.r_Window() As #FuncPrefix + "SDL_GetGrabbedWindow"
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    GetGrabbedWindow.r_Window() As #FuncPrefix + "SDL_GetGrabbedWindow"
+  CompilerEndIf
   SetWindowBrightness.int(*window.Window, brightness.f) As #FuncPrefix + "SDL_SetWindowBrightness"
   GetWindowBrightness.f(*window.Window) As #FuncPrefix + "SDL_GetWindowBrightness"
-  SetWindowOpacity.int(*window.Window, opacity.f) As #FuncPrefix + "SDL_SetWindowOpacity"
-  GetWindowOpacity.int(*window.Window, *out_opacity.pfloat) As #FuncPrefix + "SDL_GetWindowOpacity"
-  SetWindowModalFor.int(*modal_window.Window, *parent_window.Window) As #FuncPrefix + "SDL_SetWindowModalFor"
-  SetWindowInputFocus.int(*window.Window) As #FuncPrefix + "SDL_SetWindowInputFocus"
+  CompilerIf VERSION_ATLEAST(2,0,5)
+    SetWindowOpacity.int(*window.Window, opacity.f) As #FuncPrefix + "SDL_SetWindowOpacity"
+    GetWindowOpacity.int(*window.Window, *out_opacity.pfloat) As #FuncPrefix + "SDL_GetWindowOpacity"
+    SetWindowModalFor.int(*modal_window.Window, *parent_window.Window) As #FuncPrefix + "SDL_SetWindowModalFor"
+    SetWindowInputFocus.int(*window.Window) As #FuncPrefix + "SDL_SetWindowInputFocus"
+  CompilerEndIf
   SetWindowGammaRamp.int(*window.Window, *red.pUint16, *green.pUint16, *blue.pUint16) As #FuncPrefix + "SDL_SetWindowGammaRamp"
   GetWindowGammaRamp.int(*window.Window, *red.pUint16, *green.pUint16, *blue.pUint16) As #FuncPrefix + "SDL_GetWindowGammaRamp"
-  SetWindowHitTest.int(*window.Window, *callback.HitTest, *callback_data.pvoid) As #FuncPrefix + "SDL_SetWindowHitTest"
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    SetWindowHitTest.int(*window.Window, *callback.HitTest, *callback_data.pvoid) As #FuncPrefix + "SDL_SetWindowHitTest"
+  CompilerEndIf
   DestroyWindow.void(*window.Window) As #FuncPrefix + "SDL_DestroyWindow"
   IsScreenSaverEnabled.t_bool() As #FuncPrefix + "SDL_IsScreenSaverEnabled"
   EnableScreenSaver.void() As #FuncPrefix + "SDL_EnableScreenSaver"
@@ -1380,14 +1499,18 @@ ImportC #SDL2_lib
   GL_GetProcAddress.r_void(proc.p-ascii) As #FuncPrefix + "SDL_GL_GetProcAddress"
   GL_UnloadLibrary.void() As #FuncPrefix + "SDL_GL_UnloadLibrary"
   GL_ExtensionSupported.t_bool(extension.p-ascii) As #FuncPrefix + "SDL_GL_ExtensionSupported"
-  GL_ResetAttributes.void() As #FuncPrefix + "SDL_GL_ResetAttributes"
+  CompilerIf VERSION_ATLEAST(2,0,2)
+    GL_ResetAttributes.void() As #FuncPrefix + "SDL_GL_ResetAttributes"
+  CompilerEndIf
   GL_SetAttribute.int(attr.enum, value.int) As #FuncPrefix + "SDL_GL_SetAttribute"
   GL_GetAttribute.int(attr.enum, *value.pint) As #FuncPrefix + "SDL_GL_GetAttribute"
   GL_CreateContext.r_GLContext (*window.Window) As #FuncPrefix + "SDL_GL_CreateContext"
   GL_MakeCurrent.int(*window.Window, *context.t_GLContext ) As #FuncPrefix + "SDL_GL_MakeCurrent"
   GL_GetCurrentWindow.r_Window() As #FuncPrefix + "SDL_GL_GetCurrentWindow"
   GL_GetCurrentContext.r_GLContext () As #FuncPrefix + "SDL_GL_GetCurrentContext"
-  GL_GetDrawableSize.void(*window.Window, *w.pint, *h.pint) As #FuncPrefix + "SDL_GL_GetDrawableSize"
+  CompilerIf VERSION_ATLEAST(2,0,1)
+    GL_GetDrawableSize.void(*window.Window, *w.pint, *h.pint) As #FuncPrefix + "SDL_GL_GetDrawableSize"
+  CompilerEndIf
   GL_SetSwapInterval.int(interval.int) As #FuncPrefix + "SDL_GL_SetSwapInterval"
   GL_GetSwapInterval.int() As #FuncPrefix + "SDL_GL_GetSwapInterval"
   GL_SwapWindow.void(*window.Window) As #FuncPrefix + "SDL_GL_SwapWindow"
@@ -1965,10 +2088,12 @@ Enumeration SystemCursor
   #SYSTEM_CURSOR_HAND
   #NUM_SYSTEM_CURSORS
 EndEnumeration
-Enumeration MouseWheelDirection
-  #MOUSEWHEEL_NORMAL
-  #MOUSEWHEEL_FLIPPED
-EndEnumeration
+CompilerIf VERSION_ATLEAST(2,0,4)
+  Enumeration MouseWheelDirection
+    #MOUSEWHEEL_NORMAL
+    #MOUSEWHEEL_FLIPPED
+  EndEnumeration
+CompilerEndIf
 #BUTTON_LEFT = 1
 #BUTTON_MIDDLE = 2
 #BUTTON_RIGHT = 3
@@ -1984,12 +2109,18 @@ Structure Cursor:EndStructure
 ImportC #SDL2_lib
   GetMouseFocus.r_Window() As #FuncPrefix + "SDL_GetMouseFocus"
   GetMouseState.Uint32(*x.pint, *y.pint) As #FuncPrefix + "SDL_GetMouseState"
-  GetGlobalMouseState.Uint32(*x.pint, *y.pint) As #FuncPrefix + "SDL_GetGlobalMouseState"
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    GetGlobalMouseState.Uint32(*x.pint, *y.pint) As #FuncPrefix + "SDL_GetGlobalMouseState"
+  CompilerEndIf
   GetRelativeMouseState.Uint32(*x.pint, *y.pint) As #FuncPrefix + "SDL_GetRelativeMouseState"
   WarpMouseInWindow.void(*window.Window, x.int, y.int) As #FuncPrefix + "SDL_WarpMouseInWindow"
-  WarpMouseGlobal.int(x.int, y.int) As #FuncPrefix + "SDL_WarpMouseGlobal"
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    WarpMouseGlobal.int(x.int, y.int) As #FuncPrefix + "SDL_WarpMouseGlobal"
+  CompilerEndIf
   SetRelativeMouseMode.int(enabled.t_bool) As #FuncPrefix + "SDL_SetRelativeMouseMode"
-  CaptureMouse.int(enabled.t_bool) As #FuncPrefix + "SDL_CaptureMouse"
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    CaptureMouse.int(enabled.t_bool) As #FuncPrefix + "SDL_CaptureMouse"
+  CompilerEndIf
   GetRelativeMouseMode.t_bool() As #FuncPrefix + "SDL_GetRelativeMouseMode"
   CreateCursor.r_Cursor(*data.pUint8, *mask.pUint8, w.int, h.int, hot_x.int, hot_y.int) As #FuncPrefix + "SDL_CreateCursor"
   CreateColorCursor.r_Cursor(*surface.Surface, hot_x.int, hot_y.int) As #FuncPrefix + "SDL_CreateColorCursor"
@@ -2005,27 +2136,31 @@ EndImport
 ;- SDL_joystick.h.pbi
 ;{
 
-Enumeration JoystickType
-  #JOYSTICK_TYPE_UNKNOWN
-  #JOYSTICK_TYPE_GAMECONTROLLER
-  #JOYSTICK_TYPE_WHEEL
-  #JOYSTICK_TYPE_ARCADE_STICK
-  #JOYSTICK_TYPE_FLIGHT_STICK
-  #JOYSTICK_TYPE_DANCE_PAD
-  #JOYSTICK_TYPE_GUITAR
-  #JOYSTICK_TYPE_DRUM_KIT
-  #JOYSTICK_TYPE_ARCADE_PAD
-  #JOYSTICK_TYPE_THROTTLE
-EndEnumeration
-Enumeration JoystickPowerLevel
-  #JOYSTICK_POWER_UNKNOWN = - 1
-  #JOYSTICK_POWER_EMPTY
-  #JOYSTICK_POWER_LOW
-  #JOYSTICK_POWER_MEDIUM
-  #JOYSTICK_POWER_FULL
-  #JOYSTICK_POWER_WIRED
-  #JOYSTICK_POWER_MAX
-EndEnumeration
+CompilerIf VERSION_ATLEAST(2,0,6)
+  Enumeration JoystickType
+    #JOYSTICK_TYPE_UNKNOWN
+    #JOYSTICK_TYPE_GAMECONTROLLER
+    #JOYSTICK_TYPE_WHEEL
+    #JOYSTICK_TYPE_ARCADE_STICK
+    #JOYSTICK_TYPE_FLIGHT_STICK
+    #JOYSTICK_TYPE_DANCE_PAD
+    #JOYSTICK_TYPE_GUITAR
+    #JOYSTICK_TYPE_DRUM_KIT
+    #JOYSTICK_TYPE_ARCADE_PAD
+    #JOYSTICK_TYPE_THROTTLE
+  EndEnumeration
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,4)
+  Enumeration JoystickPowerLevel
+    #JOYSTICK_POWER_UNKNOWN = - 1
+    #JOYSTICK_POWER_EMPTY
+    #JOYSTICK_POWER_LOW
+    #JOYSTICK_POWER_MEDIUM
+    #JOYSTICK_POWER_FULL
+    #JOYSTICK_POWER_WIRED
+    #JOYSTICK_POWER_MAX
+  EndEnumeration
+CompilerEndIf
 #JOYSTICK_AXIS_MAX = 32767
 #JOYSTICK_AXIS_MIN = -32768
 #HAT_CENTERED = $00
@@ -2051,28 +2186,42 @@ ImportC #libSDL2_PB_HelperLib_a
   JoystickGetGUIDString.void(*guid.JoystickGUID, *pszGUID.ascii, cbGUID.int) As #FuncPrefix + "_Helper_JoystickGetGUIDString"
 EndImport
 ImportC #SDL2_lib
-  LockJoysticks.void() As #FuncPrefix + "SDL_LockJoysticks"
-  UnlockJoysticks.void() As #FuncPrefix + "SDL_UnlockJoysticks"
+  CompilerIf VERSION_ATLEAST(2,0,7)
+    LockJoysticks.void() As #FuncPrefix + "SDL_LockJoysticks"
+    UnlockJoysticks.void() As #FuncPrefix + "SDL_UnlockJoysticks"
+  CompilerEndIf
   NumJoysticks.int() As #FuncPrefix + "SDL_NumJoysticks"
   _JoystickNameForIndex.r_ascii(device_index.int) As #FuncPrefix + "SDL_JoystickNameForIndex"
   Macro JoystickNameForIndex(index): SDL::_GetAscii(SDL::_JoystickNameForIndex(index)) :EndMacro
-  JoystickGetDevicePlayerIndex.int(device_index.int) As #FuncPrefix + "SDL_JoystickGetDevicePlayerIndex"
-  JoystickGetDeviceVendor.Uint16(device_index.int) As #FuncPrefix + "SDL_JoystickGetDeviceVendor"
-  JoystickGetDeviceProduct.Uint16(device_index.int) As #FuncPrefix + "SDL_JoystickGetDeviceProduct"
-  JoystickGetDeviceProductVersion.Uint16(device_index.int) As #FuncPrefix + "SDL_JoystickGetDeviceProductVersion"
-  JoystickGetDeviceType.enum(device_index.int) As #FuncPrefix + "SDL_JoystickGetDeviceType"
-  JoystickGetDeviceInstanceID.t_JoystickID(device_index.int) As #FuncPrefix + "SDL_JoystickGetDeviceInstanceID"
+  CompilerIf VERSION_ATLEAST(2,0,9)
+    JoystickGetDevicePlayerIndex.int(device_index.int) As #FuncPrefix + "SDL_JoystickGetDevicePlayerIndex"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,6)
+    JoystickGetDeviceVendor.Uint16(device_index.int) As #FuncPrefix + "SDL_JoystickGetDeviceVendor"
+    JoystickGetDeviceProduct.Uint16(device_index.int) As #FuncPrefix + "SDL_JoystickGetDeviceProduct"
+    JoystickGetDeviceProductVersion.Uint16(device_index.int) As #FuncPrefix + "SDL_JoystickGetDeviceProductVersion"
+    JoystickGetDeviceType.enum(device_index.int) As #FuncPrefix + "SDL_JoystickGetDeviceType"
+    JoystickGetDeviceInstanceID.t_JoystickID(device_index.int) As #FuncPrefix + "SDL_JoystickGetDeviceInstanceID"
+  CompilerEndIf
   JoystickOpen.r_Joystick(device_index.int) As #FuncPrefix + "SDL_JoystickOpen"
-  JoystickFromInstanceID.r_Joystick(instance_id.t_JoystickID) As #FuncPrefix + "SDL_JoystickFromInstanceID"
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    JoystickFromInstanceID.r_Joystick(instance_id.t_JoystickID) As #FuncPrefix + "SDL_JoystickFromInstanceID"
+  CompilerEndIf
   JoystickFromPlayerIndex.r_Joystick(player_index.int) As #FuncPrefix + "SDL_JoystickFromPlayerIndex"
   _JoystickName.r_ascii(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickName"
   Macro JoystickName(joy): SDL::_GetAscii(SDL::_JoystickName(joy)) :EndMacro
-  JoystickGetPlayerIndex.int(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickGetPlayerIndex"
-  JoystickSetPlayerIndex.void(*joystick.Joystick, player_index.int) As #FuncPrefix + "SDL_JoystickSetPlayerIndex"  
-  JoystickGetVendor.Uint16(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickGetVendor"
-  JoystickGetProduct.Uint16(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickGetProduct"
-  JoystickGetProductVersion.Uint16(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickGetProductVersion"
-  JoystickGetType.enum(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickGetType"
+  CompilerIf VERSION_ATLEAST(2,0,9)
+    JoystickGetPlayerIndex.int(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickGetPlayerIndex"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,12)
+    JoystickSetPlayerIndex.void(*joystick.Joystick, player_index.int) As #FuncPrefix + "SDL_JoystickSetPlayerIndex"  
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,6)
+    JoystickGetVendor.Uint16(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickGetVendor"
+    JoystickGetProduct.Uint16(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickGetProduct"
+    JoystickGetProductVersion.Uint16(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickGetProductVersion"
+    JoystickGetType.enum(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickGetType"
+  CompilerEndIf
   JoystickGetAttached.t_bool(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickGetAttached"
   JoystickInstanceID.t_JoystickID(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickInstanceID"
   JoystickNumAxes.int(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickNumAxes"
@@ -2082,27 +2231,35 @@ ImportC #SDL2_lib
   JoystickUpdate.void() As #FuncPrefix + "SDL_JoystickUpdate"
   JoystickEventState.int(state.int) As #FuncPrefix + "SDL_JoystickEventState"
   JoystickGetAxis.Sint16(*joystick.Joystick, axis.int) As #FuncPrefix + "SDL_JoystickGetAxis"
-  JoystickGetAxisInitialState.t_bool(*joystick.Joystick, axis.int, *state.pSint16) As #FuncPrefix + "SDL_JoystickGetAxisInitialState"
+  CompilerIf VERSION_ATLEAST(2,0,6)
+    JoystickGetAxisInitialState.t_bool(*joystick.Joystick, axis.int, *state.pSint16) As #FuncPrefix + "SDL_JoystickGetAxisInitialState"
+  CompilerEndIf
   JoystickGetHat.Uint8(*joystick.Joystick, hat.int) As #FuncPrefix + "SDL_JoystickGetHat"
   JoystickGetBall.int(*joystick.Joystick, ball.int, *dx.pint, *dy.pint) As #FuncPrefix + "SDL_JoystickGetBall"
   JoystickGetButton.Uint8(*joystick.Joystick, button.int) As #FuncPrefix + "SDL_JoystickGetButton"
-  JoystickRumble.int(*joystick.Joystick, low_frequency_rumble.Uint16, high_frequency_rumble.Uint16, duration_ms.Uint32) As #FuncPrefix + "SDL_JoystickRumble"
+  CompilerIf VERSION_ATLEAST(2,0,9)
+    JoystickRumble.int(*joystick.Joystick, low_frequency_rumble.Uint16, high_frequency_rumble.Uint16, duration_ms.Uint32) As #FuncPrefix + "SDL_JoystickRumble"
+  CompilerEndIf
   JoystickClose.void(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickClose"
-  JoystickCurrentPowerLevel.enum(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickCurrentPowerLevel"
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    JoystickCurrentPowerLevel.enum(*joystick.Joystick) As #FuncPrefix + "SDL_JoystickCurrentPowerLevel"
+  CompilerEndIf
 EndImport
 ;}
 ;-----------------------
 ;- SDL_gamecontroller.h.pbi
 ;{
 
-Enumeration GameControllerType
-  #CONTROLLER_TYPE_UNKNOWN = 0
-  #CONTROLLER_TYPE_XBOX360
-  #CONTROLLER_TYPE_XBOXONE
-  #CONTROLLER_TYPE_PS3
-  #CONTROLLER_TYPE_PS4
-  #CONTROLLER_TYPE_NINTENDO_SWITCH_PRO
-EndEnumeration
+CompilerIf VERSION_ATLEAST(2,0,12)
+  Enumeration GameControllerType
+    #CONTROLLER_TYPE_UNKNOWN = 0
+    #CONTROLLER_TYPE_XBOX360
+    #CONTROLLER_TYPE_XBOXONE
+    #CONTROLLER_TYPE_PS3
+    #CONTROLLER_TYPE_PS4
+    #CONTROLLER_TYPE_NINTENDO_SWITCH_PRO
+  EndEnumeration
+CompilerEndIf
 Enumeration GameControllerBindType
   #CONTROLLER_BINDTYPE_NONE = 0
   #CONTROLLER_BINDTYPE_BUTTON
@@ -2163,30 +2320,50 @@ ImportC #libSDL2_PB_HelperLib_a
   GameControllerGetBindForButton.i(*gamecontroller.GameController, button.enum) As #FuncPrefix + "_Helper_GameControllerGetBindForButton"
 EndImport
 ImportC #SDL2_lib
-  GameControllerAddMappingsFromRW.int(*rw.RWops, freerw.int) As #FuncPrefix + "SDL_GameControllerAddMappingsFromRW"
+  CompilerIf VERSION_ATLEAST(2,0,2)
+    GameControllerAddMappingsFromRW.int(*rw.RWops, freerw.int) As #FuncPrefix + "SDL_GameControllerAddMappingsFromRW"
+  CompilerEndIf
   GameControllerAddMapping.int(mappingString.p-ascii) As #FuncPrefix + "SDL_GameControllerAddMapping"
-  GameControllerNumMappings.int() As #FuncPrefix + "SDL_GameControllerNumMappings"
-  _GameControllerMappingForIndex.r_ascii(mapping_index.int) As #FuncPrefix + "SDL_GameControllerMappingForIndex"
-  Macro GameControllerMappingForIndex(index): SDL::_GetFreeAscii(SDL::_GameControllerMappingForIndex(index)) :EndMacro
+  CompilerIf VERSION_ATLEAST(2,0,6)
+    GameControllerNumMappings.int() As #FuncPrefix + "SDL_GameControllerNumMappings"
+    _GameControllerMappingForIndex.r_ascii(mapping_index.int) As #FuncPrefix + "SDL_GameControllerMappingForIndex"
+    Macro GameControllerMappingForIndex(index): SDL::_GetFreeAscii(SDL::_GameControllerMappingForIndex(index)) :EndMacro
+  CompilerEndIf  
   _GameControllerMapping.r_ascii(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerMapping"
   Macro GameControllerMapping(gamec): SDL::_GetFreeAscii(SDL::_GameControllerMapping(gamec)) :EndMacro
   IsGameController.t_bool(joystick_index.int) As #FuncPrefix + "SDL_IsGameController"
   _GameControllerNameForIndex.r_ascii(joystick_index.int) As #FuncPrefix + "SDL_GameControllerNameForIndex"
   Macro GameControllerNameForIndex(index): SDL::_GetAscii(SDL::_GameControllerNameForIndex(index)) :EndMacro
-  GameControllerTypeForIndex.enum(joystick_index.int) As #FuncPrefix + "SDL_GameControllerTypeForIndex"
-  _GameControllerMappingForDeviceIndex.r_ascii(joystick_index.int) As #FuncPrefix + "SDL_GameControllerMappingForDeviceIndex"
-  Macro GameControllerMappingForDeviceIndex(index): SDL::_GetFreeAscii(SDL::_GameControllerMappingForDeviceIndex(index)) :EndMacro
+  CompilerIf VERSION_ATLEAST(2,0,12)
+    GameControllerTypeForIndex.enum(joystick_index.int) As #FuncPrefix + "SDL_GameControllerTypeForIndex"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,9)
+    _GameControllerMappingForDeviceIndex.r_ascii(joystick_index.int) As #FuncPrefix + "SDL_GameControllerMappingForDeviceIndex"
+    Macro GameControllerMappingForDeviceIndex(index): SDL::_GetFreeAscii(SDL::_GameControllerMappingForDeviceIndex(index)) :EndMacro
+  CompilerEndIf
   GameControllerOpen.r_GameController(joystick_index.int) As #FuncPrefix + "SDL_GameControllerOpen"
-  GameControllerFromInstanceID.r_GameController(joyid.t_JoystickID) As #FuncPrefix + "SDL_GameControllerFromInstanceID"
-  GameControllerFromPlayerIndex.r_GameController(player_index.int) As #FuncPrefix + "SDL_GameControllerFromPlayerIndex"
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    GameControllerFromInstanceID.r_GameController(joyid.t_JoystickID) As #FuncPrefix + "SDL_GameControllerFromInstanceID"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,12)
+    GameControllerFromPlayerIndex.r_GameController(player_index.int) As #FuncPrefix + "SDL_GameControllerFromPlayerIndex"
+  CompilerEndIf
   _GameControllerName.r_ascii(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerName"
   Macro GameControllerName(gamec): SDL::_GetAscii(SDL::_GameControllerName(gamec)) :EndMacro
-  GameControllerGetType.enum(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetType"
-  GameControllerGetPlayerIndex.int(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetPlayerIndex"
-  GameControllerSetPlayerIndex.void(*gamecontroller.GameController, player_index.int) As #FuncPrefix + "SDL_GameControllerSetPlayerIndex"
-  GameControllerGetVendor.Uint16(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetVendor"
-  GameControllerGetProduct.Uint16(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetProduct"
-  GameControllerGetProductVersion.Uint16(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetProductVersion"
+  CompilerIf VERSION_ATLEAST(2,0,12)
+    GameControllerGetType.enum(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetType"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,9)
+    GameControllerGetPlayerIndex.int(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetPlayerIndex"
+  CompilerEndIf  
+  CompilerIf VERSION_ATLEAST(2,0,12)
+    GameControllerSetPlayerIndex.void(*gamecontroller.GameController, player_index.int) As #FuncPrefix + "SDL_GameControllerSetPlayerIndex"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,6)
+    GameControllerGetVendor.Uint16(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetVendor"
+    GameControllerGetProduct.Uint16(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetProduct"
+    GameControllerGetProductVersion.Uint16(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetProductVersion"
+  CompilerEndIf
   GameControllerGetAttached.t_bool(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetAttached"
   GameControllerGetJoystick.r_Joystick(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerGetJoystick"
   GameControllerEventState.int(state.int) As #FuncPrefix + "SDL_GameControllerEventState"
@@ -2199,9 +2376,13 @@ ImportC #SDL2_lib
   _GameControllerGetStringForButton.r_ascii(button.enum) As #FuncPrefix + "SDL_GameControllerGetStringForButton"
   Macro GameControllerGetStringForButton(button): SDL::_GetAscii(SDL::_GameControllerGetStringForButton(button)) :EndMacro
   GameControllerGetButton.Uint8(*gamecontroller.GameController, button.enum) As #FuncPrefix + "SDL_GameControllerGetButton"
-  GameControllerRumble.int(*gamecontroller.GameController, low_frequency_rumble.Uint16, high_frequency_rumble.Uint16, duration_ms.Uint32) As #FuncPrefix + "SDL_GameControllerRumble"
+  CompilerIf VERSION_ATLEAST(2,0,9)
+    GameControllerRumble.int(*gamecontroller.GameController, low_frequency_rumble.Uint16, high_frequency_rumble.Uint16, duration_ms.Uint32) As #FuncPrefix + "SDL_GameControllerRumble"
+  CompilerEndIf
   GameControllerClose.void(*gamecontroller.GameController) As #FuncPrefix + "SDL_GameControllerClose"
-  Macro GameControllerAddMappingsFromFile(file) :  SDL::GameControllerAddMappingsFromRW(SDL::RWFromFile(file, "rb"), 1) :EndMacro
+  CompilerIf VERSION_ATLEAST(2,0,2)
+    Macro GameControllerAddMappingsFromFile(file) :  SDL::GameControllerAddMappingsFromRW(SDL::RWFromFile(file, "rb"), 1) :EndMacro
+  CompilerEndIf
 EndImport
 ;}
 ;-----------------------
@@ -2220,13 +2401,17 @@ Macro t_TouchID: Sint64 :EndMacro
 Macro t_FingerID: Sint64 :EndMacro
 Macro r_Finger: i :EndMacro
 #TOUCH_MOUSEID = -1 & $ffffffff
-#MOUSE_TOUCHID = -1 & $ffffffffffffffff
-Enumeration TouchDeviceType
-  #TOUCH_DEVICE_INVALID = - 1
-  #TOUCH_DEVICE_DIRECT
-  #TOUCH_DEVICE_INDIRECT_ABSOLUTE
-  #TOUCH_DEVICE_INDIRECT_RELATIVE
-EndEnumeration
+CompilerIf VERSION_ATLEAST(2,0,10)
+  #MOUSE_TOUCHID = -1 & $ffffffffffffffff
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,10)
+  Enumeration TouchDeviceType
+    #TOUCH_DEVICE_INVALID = - 1
+    #TOUCH_DEVICE_DIRECT
+    #TOUCH_DEVICE_INDIRECT_ABSOLUTE
+    #TOUCH_DEVICE_INDIRECT_RELATIVE
+  EndEnumeration
+CompilerEndIf
 Structure Finger Align #SDLALIGN
   id.t_FingerID
   x.f
@@ -2236,7 +2421,9 @@ EndStructure
 ImportC #SDL2_lib
   GetNumTouchDevices.int() As #FuncPrefix + "SDL_GetNumTouchDevices"
   GetTouchDevice.t_TouchID(index.int) As #FuncPrefix + "SDL_GetTouchDevice"
-  GetTouchDeviceType.enum(touchID.t_TouchID) As #FuncPrefix + "SDL_GetTouchDeviceType"
+  CompilerIf VERSION_ATLEAST(2,0,10)
+    GetTouchDeviceType.enum(touchID.t_TouchID) As #FuncPrefix + "SDL_GetTouchDeviceType"
+  CompilerEndIf
   GetNumTouchFingers.int(touchID.t_TouchID) As #FuncPrefix + "SDL_GetNumTouchFingers"
   GetTouchFinger.r_Finger(touchID.t_TouchID, index.int) As #FuncPrefix + "SDL_GetTouchFinger"
 EndImport
@@ -2270,14 +2457,18 @@ Enumeration EventType
   #APP_DIDENTERBACKGROUND
   #APP_WILLENTERFOREGROUND
   #APP_DIDENTERFOREGROUND
-  #DISPLAYEVENT = $150
+  CompilerIf VERSION_ATLEAST(2,0,9)
+    #DISPLAYEVENT = $150
+  CompilerEndIf
   #WINDOWEVENT = $200
   #SYSWMEVENT
   #KEYDOWN = $300
   #KEYUP
   #TEXTEDITING
   #TEXTINPUT
-  #KEYMAPCHANGED
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    #KEYMAPCHANGED
+  CompilerEndIf
   #MOUSEMOTION = $400
   #MOUSEBUTTONDOWN
   #MOUSEBUTTONUP
@@ -2303,14 +2494,22 @@ Enumeration EventType
   #MULTIGESTURE
   #CLIPBOARDUPDATE = $900
   #DROPFILE = $1000
-  #DROPTEXT
-  #DROPBEGIN
-  #DROPCOMPLETE
+  CompilerIf VERSION_ATLEAST(2,0,5)
+    #DROPTEXT
+    #DROPBEGIN
+    #DROPCOMPLETE
+  CompilerEndIf
   #AUDIODEVICEADDED = $1100
   #AUDIODEVICEREMOVED
-  #SENSORUPDATE = $1200
-  #RENDER_TARGETS_RESET = $2000
-  #RENDER_DEVICE_RESET
+  CompilerIf VERSION_ATLEAST(2,0,9)
+    #SENSORUPDATE = $1200
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,2)
+    #RENDER_TARGETS_RESET = $2000
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    #RENDER_DEVICE_RESET
+  CompilerEndIf
   #USEREVENT = $8000
   #LASTEVENT = $FFFF
 EndEnumeration
@@ -2331,17 +2530,19 @@ Structure CommonEvent Align #SDLALIGN
   timestamp.Uint32
 EndStructure
 Macro r_CommonEvent: i :EndMacro
-Structure DisplayEvent Align #SDLALIGN
-  type.Uint32
-  timestamp.Uint32
-  display.Uint32
-  event.Uint8
-  padding1.Uint8
-  padding2.Uint8
-  padding3.Uint8
-  data1.Sint32
-EndStructure
-Macro r_DisplayEvent: i :EndMacro
+CompilerIf VERSION_ATLEAST(2,0,9)
+  Structure DisplayEvent Align #SDLALIGN
+    type.Uint32
+    timestamp.Uint32
+    display.Uint32
+    event.Uint8
+    padding1.Uint8
+    padding2.Uint8
+    padding3.Uint8
+    data1.Sint32
+  EndStructure
+  Macro r_DisplayEvent: i :EndMacro
+CompilerEndIf
 Structure WindowEvent Align #SDLALIGN
   type.Uint32
   timestamp.Uint32
@@ -2413,7 +2614,9 @@ Structure MouseWheelEvent Align #SDLALIGN
   which.Uint32
   x.Sint32
   y.Sint32
-  direction.Uint32
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    direction.Uint32
+  CompilerEndIf
 EndStructure
 Macro r_MouseWheelEvent: i :EndMacro
 Structure JoyAxisEvent Align #SDLALIGN
@@ -2494,16 +2697,18 @@ Structure ControllerDeviceEvent Align #SDLALIGN
   which.Sint32
 EndStructure
 Macro r_ControllerDeviceEvent: i :EndMacro
-Structure AudioDeviceEvent Align #SDLALIGN
-  type.Uint32
-  timestamp.Uint32
-  which.Uint32
-  iscapture.Uint8
-  padding1.Uint8
-  padding2.Uint8
-  padding3.Uint8
-EndStructure
-Macro r_AudioDeviceEvent: i :EndMacro
+CompilerIf VERSION_ATLEAST(2,0,4)
+  Structure AudioDeviceEvent Align #SDLALIGN
+    type.Uint32
+    timestamp.Uint32
+    which.Uint32
+    iscapture.Uint8
+    padding1.Uint8
+    padding2.Uint8
+    padding3.Uint8
+  EndStructure
+  Macro r_AudioDeviceEvent: i :EndMacro
+CompilerEndIf
 Structure TouchFingerEvent Align #SDLALIGN
   type.Uint32
   timestamp.Uint32
@@ -2514,7 +2719,9 @@ Structure TouchFingerEvent Align #SDLALIGN
   dx.f
   dy.f
   pressure.f
-  windowID.Uint32
+  CompilerIf VERSION_ATLEAST(2,0,12)
+    windowID.Uint32
+  CompilerEndIf
 EndStructure
 Macro r_TouchFingerEvent: i :EndMacro
 Structure MultiGestureEvent Align #SDLALIGN
@@ -2544,16 +2751,20 @@ Structure DropEvent Align #SDLALIGN
   type.Uint32
   timestamp.Uint32
   *file.pchar
-  windowID.Uint32
+  CompilerIf VERSION_ATLEAST(2,0,5)
+    windowID.Uint32
+  CompilerEndIf
 EndStructure
 Macro r_DropEvent: i :EndMacro
-Structure SensorEvent Align #SDLALIGN
-  type.Uint32
-  timestamp.Uint32
-  which.Sint32
-  Data.f [ 6 ]
-EndStructure
-Macro r_SensorEvent: i :EndMacro
+CompilerIf VERSION_ATLEAST(2,0,9)
+  Structure SensorEvent Align #SDLALIGN
+    type.Uint32
+    timestamp.Uint32
+    which.Sint32
+    Data.f [ 6 ]
+  EndStructure
+  Macro r_SensorEvent: i :EndMacro
+CompilerEndIf
 Structure QuitEvent Align #SDLALIGN
   type.Uint32
   timestamp.Uint32
@@ -2583,7 +2794,9 @@ Structure Event Align #SDLALIGN
   StructureUnion
     type.Uint32
     common.CommonEvent 
-    display.DisplayEvent 
+    CompilerIf VERSION_ATLEAST(2,0,9)
+      display.DisplayEvent 
+    CompilerEndIf
     window.WindowEvent   
     key.KeyboardEvent    
     edit.TextEditingEvent
@@ -2599,8 +2812,12 @@ Structure Event Align #SDLALIGN
     caxis.ControllerAxisEvent 
     cbutton.ControllerButtonEvent 
     cdevice.ControllerDeviceEvent 
-    adevice.AudioDeviceEvent      
-    sensor.SensorEvent            
+    CompilerIf VERSION_ATLEAST(2,0,4)
+      adevice.AudioDeviceEvent      
+    CompilerEndIf
+    CompilerIf VERSION_ATLEAST(2,0,9)
+      sensor.SensorEvent            
+    CompilerEndIf
     quit.QuitEvent                
     user.UserEvent                
     syswm.SysWMEvent              
@@ -2612,8 +2829,10 @@ Structure Event Align #SDLALIGN
   EndStructureUnion
 EndStructure
 Macro r_Event: i :EndMacro
-CompilerIf SizeOf(event) <> 56
-  CompilerError("SDL_EVENTS - Structure wrong size!")
+CompilerIf VERSION_ATLEAST(2,0,10)
+  CompilerIf SizeOf(event) <> 56
+    CompilerError("SDL_EVENTS - Structure wrong size!")
+  CompilerEndIf
 CompilerEndIf
 ImportC #SDL2_lib
   PumpEvents.void() As #FuncPrefix + "SDL_PumpEvents"
@@ -2641,10 +2860,12 @@ EndImport
 ;{
 
 ImportC #SDL2_lib
-  _GetBasePath.r_utf8() As #FuncPrefix + "SDL_GetBasePath"
-  Macro GetBasePath(): SDL::_GetFreeUTF8(SDL::_GetBasePath()) :EndMacro
-  _GetPrefPath.r_utf8(org.p-utf8, app.p-utf8) As #FuncPrefix + "SDL_GetPrefPath"
-  Macro GetPrefPath(org,app): SDL::_GetFreeUTF8(SDL::_GetPrefPath(org,app)) :EndMacro
+  CompilerIf VERSION_ATLEAST(2,0,1)
+    _GetBasePath.r_utf8() As #FuncPrefix + "SDL_GetBasePath"
+    Macro GetBasePath(): SDL::_GetFreeUTF8(SDL::_GetBasePath()) :EndMacro
+    _GetPrefPath.r_utf8(org.p-utf8, app.p-utf8) As #FuncPrefix + "SDL_GetPrefPath"
+    Macro GetPrefPath(org,app): SDL::_GetFreeUTF8(SDL::_GetPrefPath(org,app)) :EndMacro
+  CompilerEndIf
 EndImport
 ;}
 ;-----------------------
@@ -2816,94 +3037,196 @@ EndImport
 #HINT_FRAMEBUFFER_ACCELERATION = "SDL_FRAMEBUFFER_ACCELERATION"
 #HINT_RENDER_DRIVER = "SDL_RENDER_DRIVER"
 #HINT_RENDER_OPENGL_SHADERS = "SDL_RENDER_OPENGL_SHADERS"
-#HINT_RENDER_DIRECT3D_THREADSAFE = "SDL_RENDER_DIRECT3D_THREADSAFE"
-#HINT_RENDER_DIRECT3D11_DEBUG = "SDL_RENDER_DIRECT3D11_DEBUG"
-#HINT_RENDER_LOGICAL_SIZE_MODE = "SDL_RENDER_LOGICAL_SIZE_MODE"
+CompilerIf VERSION_ATLEAST(2,0,1)
+  #HINT_RENDER_DIRECT3D_THREADSAFE = "SDL_RENDER_DIRECT3D_THREADSAFE"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,3)
+  CompilerIf VERSION_ATLEAST(2,0,4)  
+    #HINT_RENDER_DIRECT3D11_DEBUG = "SDL_RENDER_DIRECT3D11_DEBUG"
+  CompilerElse
+    #HINT_RENDER_DIRECT3D11_DEBUG = "SDL_HINT_RENDER_DIRECT3D11_DEBUG"
+  CompilerEndIf  
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,6)
+  #HINT_RENDER_LOGICAL_SIZE_MODE = "SDL_RENDER_LOGICAL_SIZE_MODE"
+CompilerEndIf
 #HINT_RENDER_SCALE_QUALITY = "SDL_RENDER_SCALE_QUALITY"
 #HINT_RENDER_VSYNC = "SDL_RENDER_VSYNC"
-#HINT_VIDEO_ALLOW_SCREENSAVER = "SDL_VIDEO_ALLOW_SCREENSAVER"
-#HINT_VIDEO_EXTERNAL_CONTEXT = "SDL_VIDEO_EXTERNAL_CONTEXT"
+CompilerIf VERSION_ATLEAST(2,0,2)
+  #HINT_VIDEO_ALLOW_SCREENSAVER = "SDL_VIDEO_ALLOW_SCREENSAVER"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,12)
+  #HINT_VIDEO_EXTERNAL_CONTEXT = "SDL_VIDEO_EXTERNAL_CONTEXT"
+CompilerEndIf
 #HINT_VIDEO_X11_XVIDMODE = "SDL_VIDEO_X11_XVIDMODE"
 #HINT_VIDEO_X11_XINERAMA = "SDL_VIDEO_X11_XINERAMA"
 #HINT_VIDEO_X11_XRANDR = "SDL_VIDEO_X11_XRANDR"
-#HINT_VIDEO_X11_WINDOW_VISUALID = "SDL_VIDEO_X11_WINDOW_VISUALID"
-#HINT_VIDEO_X11_NET_WM_PING = "SDL_VIDEO_X11_NET_WM_PING"
-#HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR = "SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"
-#HINT_VIDEO_X11_FORCE_EGL = "SDL_VIDEO_X11_FORCE_EGL"
-#HINT_WINDOW_FRAME_USABLE_WHILE_CURSOR_HIDDEN = "SDL_WINDOW_FRAME_USABLE_WHILE_CURSOR_HIDDEN"
-#HINT_WINDOWS_INTRESOURCE_ICON = "SDL_WINDOWS_INTRESOURCE_ICON"
-#HINT_WINDOWS_INTRESOURCE_ICON_SMALL = "SDL_WINDOWS_INTRESOURCE_ICON_SMALL"
-#HINT_WINDOWS_ENABLE_MESSAGELOOP = "SDL_WINDOWS_ENABLE_MESSAGELOOP"
+CompilerIf VERSION_ATLEAST(2,0,12)
+  #HINT_VIDEO_X11_WINDOW_VISUALID = "SDL_VIDEO_X11_WINDOW_VISUALID"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,4)
+  #HINT_VIDEO_X11_NET_WM_PING = "SDL_VIDEO_X11_NET_WM_PING"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,8)
+  #HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR = "SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,12)
+  #HINT_VIDEO_X11_FORCE_EGL = "SDL_VIDEO_X11_FORCE_EGL"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,4)
+  #HINT_WINDOW_FRAME_USABLE_WHILE_CURSOR_HIDDEN = "SDL_WINDOW_FRAME_USABLE_WHILE_CURSOR_HIDDEN"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,6)
+  #HINT_WINDOWS_INTRESOURCE_ICON = "SDL_WINDOWS_INTRESOURCE_ICON"
+  #HINT_WINDOWS_INTRESOURCE_ICON_SMALL = "SDL_WINDOWS_INTRESOURCE_ICON_SMALL"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,4)
+  #HINT_WINDOWS_ENABLE_MESSAGELOOP = "SDL_WINDOWS_ENABLE_MESSAGELOOP"
+CompilerEndIf
 #HINT_GRAB_KEYBOARD = "SDL_GRAB_KEYBOARD"
-#HINT_MOUSE_DOUBLE_CLICK_TIME = "SDL_MOUSE_DOUBLE_CLICK_TIME"
-#HINT_MOUSE_DOUBLE_CLICK_RADIUS = "SDL_MOUSE_DOUBLE_CLICK_RADIUS"
-#HINT_MOUSE_NORMAL_SPEED_SCALE = "SDL_MOUSE_NORMAL_SPEED_SCALE"
-#HINT_MOUSE_RELATIVE_SPEED_SCALE = "SDL_MOUSE_RELATIVE_SPEED_SCALE"
-#HINT_MOUSE_RELATIVE_MODE_WARP = "SDL_MOUSE_RELATIVE_MODE_WARP"
-#HINT_MOUSE_FOCUS_CLICKTHROUGH = "SDL_MOUSE_FOCUS_CLICKTHROUGH"
-#HINT_TOUCH_MOUSE_EVENTS = "SDL_TOUCH_MOUSE_EVENTS"
-#HINT_MOUSE_TOUCH_EVENTS = "SDL_MOUSE_TOUCH_EVENTS"
+CompilerIf VERSION_ATLEAST(2,0,9)
+  #HINT_MOUSE_DOUBLE_CLICK_TIME = "SDL_MOUSE_DOUBLE_CLICK_TIME"
+  #HINT_MOUSE_DOUBLE_CLICK_RADIUS = "SDL_MOUSE_DOUBLE_CLICK_RADIUS"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,6)
+  #HINT_MOUSE_NORMAL_SPEED_SCALE = "SDL_MOUSE_NORMAL_SPEED_SCALE"
+  #HINT_MOUSE_RELATIVE_SPEED_SCALE = "SDL_MOUSE_RELATIVE_SPEED_SCALE"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,2)
+  #HINT_MOUSE_RELATIVE_MODE_WARP = "SDL_MOUSE_RELATIVE_MODE_WARP"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,5)
+  #HINT_MOUSE_FOCUS_CLICKTHROUGH = "SDL_MOUSE_FOCUS_CLICKTHROUGH"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,6)
+  #HINT_TOUCH_MOUSE_EVENTS = "SDL_TOUCH_MOUSE_EVENTS"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,10)
+  #HINT_MOUSE_TOUCH_EVENTS = "SDL_MOUSE_TOUCH_EVENTS"
+CompilerEndIf
 #HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS = "SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS"
 #HINT_IDLE_TIMER_DISABLED = "SDL_IOS_IDLE_TIMER_DISABLED"
 #HINT_ORIENTATIONS = "SDL_IOS_ORIENTATIONS"
-#HINT_APPLE_TV_CONTROLLER_UI_EVENTS = "SDL_APPLE_TV_CONTROLLER_UI_EVENTS"
-#HINT_APPLE_TV_REMOTE_ALLOW_ROTATION = "SDL_APPLE_TV_REMOTE_ALLOW_ROTATION"
-#HINT_IOS_HIDE_HOME_INDICATOR = "SDL_IOS_HIDE_HOME_INDICATOR"
-#HINT_ACCELEROMETER_AS_JOYSTICK = "SDL_ACCELEROMETER_AS_JOYSTICK"
-#HINT_TV_REMOTE_AS_JOYSTICK = "SDL_TV_REMOTE_AS_JOYSTICK"
+CompilerIf VERSION_ATLEAST(2,0,5)
+  #HINT_APPLE_TV_CONTROLLER_UI_EVENTS = "SDL_APPLE_TV_CONTROLLER_UI_EVENTS"
+  #HINT_APPLE_TV_REMOTE_ALLOW_ROTATION = "SDL_APPLE_TV_REMOTE_ALLOW_ROTATION"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,8)
+  #HINT_IOS_HIDE_HOME_INDICATOR = "SDL_IOS_HIDE_HOME_INDICATOR"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,2)
+  #HINT_ACCELEROMETER_AS_JOYSTICK = "SDL_ACCELEROMETER_AS_JOYSTICK"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,8)
+  #HINT_TV_REMOTE_AS_JOYSTICK = "SDL_TV_REMOTE_AS_JOYSTICK"
+CompilerEndIf
 #HINT_XINPUT_ENABLED = "SDL_XINPUT_ENABLED"
-#HINT_XINPUT_USE_OLD_JOYSTICK_MAPPING = "SDL_XINPUT_USE_OLD_JOYSTICK_MAPPING"
-#HINT_GAMECONTROLLERTYPE = "SDL_GAMECONTROLLERTYPE"
+CompilerIf VERSION_ATLEAST(2,0,4)
+  #HINT_XINPUT_USE_OLD_JOYSTICK_MAPPING = "SDL_XINPUT_USE_OLD_JOYSTICK_MAPPING"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,12)
+  #HINT_GAMECONTROLLERTYPE = "SDL_GAMECONTROLLERTYPE"
+CompilerEndIf
 #HINT_GAMECONTROLLERCONFIG = "SDL_GAMECONTROLLERCONFIG"
-#HINT_GAMECONTROLLERCONFIG_FILE = "SDL_GAMECONTROLLERCONFIG_FILE"
-#HINT_GAMECONTROLLER_IGNORE_DEVICES = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
-#HINT_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT = "SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT"
-#HINT_GAMECONTROLLER_USE_BUTTON_LABELS = "SDL_GAMECONTROLLER_USE_BUTTON_LABELS"
+CompilerIf VERSION_ATLEAST(2,0,10)
+  #HINT_GAMECONTROLLERCONFIG_FILE = "SDL_GAMECONTROLLERCONFIG_FILE"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,6)
+  #HINT_GAMECONTROLLER_IGNORE_DEVICES = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
+  #HINT_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT = "SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,12)
+  #HINT_GAMECONTROLLER_USE_BUTTON_LABELS = "SDL_GAMECONTROLLER_USE_BUTTON_LABELS"
+CompilerEndIf
 #HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS = "SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS"
-#HINT_JOYSTICK_HIDAPI = "SDL_JOYSTICK_HIDAPI"
-#HINT_JOYSTICK_HIDAPI_PS4 = "SDL_JOYSTICK_HIDAPI_PS4"
-#HINT_JOYSTICK_HIDAPI_PS4_RUMBLE = "SDL_JOYSTICK_HIDAPI_PS4_RUMBLE"
-#HINT_JOYSTICK_HIDAPI_STEAM = "SDL_JOYSTICK_HIDAPI_STEAM"
-#HINT_JOYSTICK_HIDAPI_SWITCH = "SDL_JOYSTICK_HIDAPI_SWITCH"
-#HINT_JOYSTICK_HIDAPI_XBOX = "SDL_JOYSTICK_HIDAPI_XBOX"
-#HINT_JOYSTICK_HIDAPI_GAMECUBE = "SDL_JOYSTICK_HIDAPI_GAMECUBE"
-#HINT_ENABLE_STEAM_CONTROLLERS = "SDL_ENABLE_STEAM_CONTROLLERS"
+CompilerIf VERSION_ATLEAST(2,0,9)
+  #HINT_JOYSTICK_HIDAPI = "SDL_JOYSTICK_HIDAPI"
+  #HINT_JOYSTICK_HIDAPI_PS4 = "SDL_JOYSTICK_HIDAPI_PS4"
+  #HINT_JOYSTICK_HIDAPI_PS4_RUMBLE = "SDL_JOYSTICK_HIDAPI_PS4_RUMBLE"
+  #HINT_JOYSTICK_HIDAPI_STEAM = "SDL_JOYSTICK_HIDAPI_STEAM"
+  #HINT_JOYSTICK_HIDAPI_SWITCH = "SDL_JOYSTICK_HIDAPI_SWITCH"
+  #HINT_JOYSTICK_HIDAPI_XBOX = "SDL_JOYSTICK_HIDAPI_XBOX"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,12)
+  #HINT_JOYSTICK_HIDAPI_GAMECUBE = "SDL_JOYSTICK_HIDAPI_GAMECUBE"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,9)
+  #HINT_ENABLE_STEAM_CONTROLLERS = "SDL_ENABLE_STEAM_CONTROLLERS"
+CompilerEndIf
 #HINT_ALLOW_TOPMOST = "SDL_ALLOW_TOPMOST"
 #HINT_TIMER_RESOLUTION = "SDL_TIMER_RESOLUTION"
-#HINT_QTWAYLAND_CONTENT_ORIENTATION = "SDL_QTWAYLAND_CONTENT_ORIENTATION"
-#HINT_QTWAYLAND_WINDOW_FLAGS = "SDL_QTWAYLAND_WINDOW_FLAGS"
-#HINT_THREAD_STACK_SIZE = "SDL_THREAD_STACK_SIZE"
-#HINT_VIDEO_HIGHDPI_DISABLED = "SDL_VIDEO_HIGHDPI_DISABLED"
-#HINT_MAC_CTRL_CLICK_EMULATE_RIGHT_CLICK = "SDL_MAC_CTRL_CLICK_EMULATE_RIGHT_CLICK"
-#HINT_VIDEO_WIN_D3DCOMPILER = "SDL_VIDEO_WIN_D3DCOMPILER"
-#HINT_VIDEO_WINDOW_SHARE_PIXEL_FORMAT = "SDL_VIDEO_WINDOW_SHARE_PIXEL_FORMAT"
-#HINT_WINRT_PRIVACY_POLICY_URL = "SDL_WINRT_PRIVACY_POLICY_URL"
-#HINT_WINRT_PRIVACY_POLICY_LABEL = "SDL_WINRT_PRIVACY_POLICY_LABEL"
-#HINT_WINRT_HANDLE_BACK_BUTTON = "SDL_WINRT_HANDLE_BACK_BUTTON"
-#HINT_VIDEO_MAC_FULLSCREEN_SPACES = "SDL_VIDEO_MAC_FULLSCREEN_SPACES"
-#HINT_MAC_BACKGROUND_APP = "SDL_MAC_BACKGROUND_APP"
-#HINT_ANDROID_APK_EXPANSION_MAIN_FILE_VERSION = "SDL_ANDROID_APK_EXPANSION_MAIN_FILE_VERSION"
-#HINT_ANDROID_APK_EXPANSION_PATCH_FILE_VERSION = "SDL_ANDROID_APK_EXPANSION_PATCH_FILE_VERSION"
-#HINT_IME_INTERNAL_EDITING = "SDL_IME_INTERNAL_EDITING"
-#HINT_ANDROID_TRAP_BACK_BUTTON = "SDL_ANDROID_TRAP_BACK_BUTTON"
-#HINT_ANDROID_BLOCK_ON_PAUSE = "SDL_ANDROID_BLOCK_ON_PAUSE"
-#HINT_RETURN_KEY_HIDES_IME = "SDL_RETURN_KEY_HIDES_IME"
-#HINT_EMSCRIPTEN_KEYBOARD_ELEMENT = "SDL_EMSCRIPTEN_KEYBOARD_ELEMENT"
-#HINT_NO_SIGNAL_HANDLERS = "SDL_NO_SIGNAL_HANDLERS"
-#HINT_WINDOWS_NO_CLOSE_ON_ALT_F4 = "SDL_WINDOWS_NO_CLOSE_ON_ALT_F4"
-#HINT_BMP_SAVE_LEGACY_FORMAT = "SDL_BMP_SAVE_LEGACY_FORMAT"
-#HINT_WINDOWS_DISABLE_THREAD_NAMING = "SDL_WINDOWS_DISABLE_THREAD_NAMING"
-#HINT_RPI_VIDEO_LAYER = "SDL_RPI_VIDEO_LAYER"
-#HINT_VIDEO_DOUBLE_BUFFER = "SDL_VIDEO_DOUBLE_BUFFER"
-#HINT_OPENGL_ES_DRIVER = "SDL_OPENGL_ES_DRIVER"
-#HINT_AUDIO_RESAMPLING_MODE = "SDL_AUDIO_RESAMPLING_MODE"
-#HINT_AUDIO_CATEGORY = "SDL_AUDIO_CATEGORY"
-#HINT_RENDER_BATCHING = "SDL_RENDER_BATCHING"
-#HINT_EVENT_LOGGING = "SDL_EVENT_LOGGING"
-#HINT_WAVE_RIFF_CHUNK_SIZE = "SDL_WAVE_RIFF_CHUNK_SIZE"
-#HINT_WAVE_TRUNCATION = "SDL_WAVE_TRUNCATION"
-#HINT_WAVE_FACT_CHUNK = "SDL_WAVE_FACT_CHUNK"
-#HINT_DISPLAY_USABLE_BOUNDS = "SDL_DISPLAY_USABLE_BOUNDS"
+CompilerIf VERSION_ATLEAST(2,0,6)
+  #HINT_QTWAYLAND_CONTENT_ORIENTATION = "SDL_QTWAYLAND_CONTENT_ORIENTATION"
+  #HINT_QTWAYLAND_WINDOW_FLAGS = "SDL_QTWAYLAND_WINDOW_FLAGS"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,4)
+  #HINT_THREAD_STACK_SIZE = "SDL_THREAD_STACK_SIZE"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,1)
+  #HINT_VIDEO_HIGHDPI_DISABLED = "SDL_VIDEO_HIGHDPI_DISABLED"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,2)
+  #HINT_MAC_CTRL_CLICK_EMULATE_RIGHT_CLICK = "SDL_MAC_CTRL_CLICK_EMULATE_RIGHT_CLICK"
+  #HINT_VIDEO_WIN_D3DCOMPILER = "SDL_VIDEO_WIN_D3DCOMPILER"
+  #HINT_VIDEO_WINDOW_SHARE_PIXEL_FORMAT = "SDL_VIDEO_WINDOW_SHARE_PIXEL_FORMAT"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,3)
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    #HINT_WINRT_PRIVACY_POLICY_URL = "SDL_WINRT_PRIVACY_POLICY_URL"
+    #HINT_WINRT_PRIVACY_POLICY_LABEL = "SDL_WINRT_PRIVACY_POLICY_LABEL"
+    #HINT_WINRT_HANDLE_BACK_BUTTON = "SDL_WINRT_HANDLE_BACK_BUTTON"
+  CompilerElse
+    #HINT_WINRT_PRIVACY_POLICY_URL = "SDL_HINT_WINRT_PRIVACY_POLICY_URL"
+    #HINT_WINRT_PRIVACY_POLICY_LABEL = "SDL_HINT_WINRT_PRIVACY_POLICY_LABEL"
+    #HINT_WINRT_HANDLE_BACK_BUTTON = "SDL_HINT_WINRT_HANDLE_BACK_BUTTON"
+  CompilerEndIf  
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,2)
+  #HINT_VIDEO_MAC_FULLSCREEN_SPACES = "SDL_VIDEO_MAC_FULLSCREEN_SPACES"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,4)
+  #HINT_MAC_BACKGROUND_APP = "SDL_MAC_BACKGROUND_APP"
+  #HINT_ANDROID_APK_EXPANSION_MAIN_FILE_VERSION = "SDL_ANDROID_APK_EXPANSION_MAIN_FILE_VERSION"
+  #HINT_ANDROID_APK_EXPANSION_PATCH_FILE_VERSION = "SDL_ANDROID_APK_EXPANSION_PATCH_FILE_VERSION"
+  #HINT_IME_INTERNAL_EDITING = "SDL_IME_INTERNAL_EDITING"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,9)
+  #HINT_ANDROID_TRAP_BACK_BUTTON = "SDL_ANDROID_TRAP_BACK_BUTTON"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,10)
+  #HINT_ANDROID_BLOCK_ON_PAUSE = "SDL_ANDROID_BLOCK_ON_PAUSE"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,8)
+  #HINT_RETURN_KEY_HIDES_IME = "SDL_RETURN_KEY_HIDES_IME"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,4)
+  #HINT_EMSCRIPTEN_KEYBOARD_ELEMENT = "SDL_EMSCRIPTEN_KEYBOARD_ELEMENT"
+  #HINT_NO_SIGNAL_HANDLERS = "SDL_NO_SIGNAL_HANDLERS"
+  #HINT_WINDOWS_NO_CLOSE_ON_ALT_F4 = "SDL_WINDOWS_NO_CLOSE_ON_ALT_F4"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,5)
+  #HINT_BMP_SAVE_LEGACY_FORMAT = "SDL_BMP_SAVE_LEGACY_FORMAT"
+  #HINT_WINDOWS_DISABLE_THREAD_NAMING = "SDL_WINDOWS_DISABLE_THREAD_NAMING"
+  #HINT_RPI_VIDEO_LAYER = "SDL_RPI_VIDEO_LAYER"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,8)
+  #HINT_VIDEO_DOUBLE_BUFFER = "SDL_VIDEO_DOUBLE_BUFFER"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,6)
+  #HINT_OPENGL_ES_DRIVER = "SDL_OPENGL_ES_DRIVER"
+  #HINT_AUDIO_RESAMPLING_MODE = "SDL_AUDIO_RESAMPLING_MODE"
+  #HINT_AUDIO_CATEGORY = "SDL_AUDIO_CATEGORY"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,10)
+  #HINT_RENDER_BATCHING = "SDL_RENDER_BATCHING"
+  #HINT_EVENT_LOGGING = "SDL_EVENT_LOGGING"
+  #HINT_WAVE_RIFF_CHUNK_SIZE = "SDL_WAVE_RIFF_CHUNK_SIZE"
+  #HINT_WAVE_TRUNCATION = "SDL_WAVE_TRUNCATION"
+  #HINT_WAVE_FACT_CHUNK = "SDL_WAVE_FACT_CHUNK"
+CompilerEndIf
+CompilerIf VERSION_ATLEAST(2,0,12)
+  #HINT_DISPLAY_USABLE_BOUNDS = "SDL_DISPLAY_USABLE_BOUNDS"
+CompilerEndIf
 Enumeration HintPriority
   #HINT_DEFAULT
   #HINT_NORMAL
@@ -2915,7 +3238,9 @@ ImportC #SDL2_lib
   SetHint.t_bool(name.p-ascii, value.p-ascii) As #FuncPrefix + "SDL_SetHint"
   _GetHint.r_ascii(name.p-ascii) As #FuncPrefix + "SDL_GetHint"
   Macro GetHint(name): SDL::_GetAscii(SDL::_GetHint(name)) : EndMacro
-  GetHintBoolean.t_bool(name.p-ascii, default_value.t_bool) As #FuncPrefix + "SDL_GetHintBoolean"
+  CompilerIf VERSION_ATLEAST(2,0,5)
+    GetHintBoolean.t_bool(name.p-ascii, default_value.t_bool) As #FuncPrefix + "SDL_GetHintBoolean"
+  CompilerEndIf
   AddHintCallback.void(name.p-ascii, *callback.HintCallback, *userdata.pvoid) As #FuncPrefix + "SDL_AddHintCallback"
   DelHintCallback.void(name.p-ascii, *callback.HintCallback, *userdata.pvoid) As #FuncPrefix + "SDL_DelHintCallback"
   ClearHints.void() As #FuncPrefix + "SDL_ClearHints"
@@ -2997,8 +3322,10 @@ Enumeration MessageBoxFlags
   #MESSAGEBOX_ERROR = $00000010
   #MESSAGEBOX_WARNING = $00000020
   #MESSAGEBOX_INFORMATION = $00000040
-  #MESSAGEBOX_BUTTONS_LEFT_TO_RIGHT = $00000080
-  #MESSAGEBOX_BUTTONS_RIGHT_TO_LEFT = $00000100
+  CompilerIf VERSION_ATLEAST(2,0,12)
+    #MESSAGEBOX_BUTTONS_LEFT_TO_RIGHT = $00000080
+    #MESSAGEBOX_BUTTONS_RIGHT_TO_LEFT = $00000100
+  CompilerEndIf
 EndEnumeration
 Enumeration MessageBoxButtonFlags
   #MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT = $00000001
@@ -3047,12 +3374,14 @@ EndImport
 ;- SDL_metal.h.pbi
 ;{
 
-Macro t_MetalView: pvoid :EndMacro
-Macro r_MetalView: i :EndMacro
-ImportC #SDL2_lib
-  Metal_CreateView.r_MetalView(*window.Window) As #FuncPrefix + "SDL_Metal_CreateView"
-  Metal_DestroyView.void(*view.t_MetalView) As #FuncPrefix + "SDL_Metal_DestroyView"
-EndImport
+CompilerIf VERSION_ATLEAST(2,0,12)
+  Macro t_MetalView: pvoid :EndMacro
+  Macro r_MetalView: i :EndMacro
+  ImportC #SDL2_lib
+    Metal_CreateView.r_MetalView(*window.Window) As #FuncPrefix + "SDL_Metal_CreateView"
+    Metal_DestroyView.void(*view.t_MetalView) As #FuncPrefix + "SDL_Metal_DestroyView"
+  EndImport
+CompilerEndIf
 ;}
 ;-----------------------
 ;- SDL_power.h.pbi
@@ -3079,11 +3408,13 @@ Enumeration RendererFlags
   #RENDERER_PRESENTVSYNC = $00000004
   #RENDERER_TARGETTEXTURE = $00000008
 EndEnumeration
-Enumeration ScaleMode
-  #ScaleModeNearest
-  #ScaleModeLinear
-  #ScaleModeBest
-EndEnumeration
+CompilerIf VERSION_ATLEAST(2,0,12)
+  Enumeration ScaleMode
+    #ScaleModeNearest
+    #ScaleModeLinear
+    #ScaleModeBest
+  EndEnumeration
+CompilerEndIf
 Enumeration TextureAccess
   #TEXTUREACCESS_STATIC
   #TEXTUREACCESS_STREAMING
@@ -3131,25 +3462,35 @@ ImportC #SDL2_lib
   GetTextureAlphaMod.int(*texture.Texture, *alpha.pUint8) As #FuncPrefix + "SDL_GetTextureAlphaMod"
   SetTextureBlendMode.int(*texture.Texture, blendMode.enum) As #FuncPrefix + "SDL_SetTextureBlendMode"
   GetTextureBlendMode.int(*texture.Texture, *blendMode.penum) As #FuncPrefix + "SDL_GetTextureBlendMode"
-  SetTextureScaleMode.int(*texture.Texture, scaleMode.enum) As #FuncPrefix + "SDL_SetTextureScaleMode"
-  GetTextureScaleMode.int(*texture.Texture, *scaleMode.penum) As #FuncPrefix + "SDL_GetTextureScaleMode"
+  CompilerIf VERSION_ATLEAST(2,0,12)
+    SetTextureScaleMode.int(*texture.Texture, scaleMode.enum) As #FuncPrefix + "SDL_SetTextureScaleMode"    
+    GetTextureScaleMode.int(*texture.Texture, *scaleMode.penum) As #FuncPrefix + "SDL_GetTextureScaleMode"
+  CompilerEndIf
   UpdateTexture.int(*texture.Texture, *rectx.Rect, *pixels.pvoid, pitch.int) As #FuncPrefix + "SDL_UpdateTexture"
-  UpdateYUVTexture.int(*texture.Texture, *rectx.Rect, *Yplane.pUint8, Ypitch.int, *Uplane.pUint8, Upitch.int, *Vplane.pUint8, Vpitch.int) As #FuncPrefix + "SDL_UpdateYUVTexture"
+  CompilerIf VERSION_ATLEAST(2,0,1)
+    UpdateYUVTexture.int(*texture.Texture, *rectx.Rect, *Yplane.pUint8, Ypitch.int, *Uplane.pUint8, Upitch.int, *Vplane.pUint8, Vpitch.int) As #FuncPrefix + "SDL_UpdateYUVTexture"
+  CompilerEndIf
   LockTexture.int(*texture.Texture, *rectx.Rect, *pp_pixels.pvoid, *pitch.pint) As #FuncPrefix + "SDL_LockTexture"
-  LockTextureToSurface.int(*texture.Texture, *rectx.Rect, *pp_surface.Surface) As #FuncPrefix + "SDL_LockTextureToSurface"
+  CompilerIf VERSION_ATLEAST(2,0,12)
+    LockTextureToSurface.int(*texture.Texture, *rectx.Rect, *pp_surface.Surface) As #FuncPrefix + "SDL_LockTextureToSurface"
+  CompilerEndIf
   UnlockTexture.void(*texture.Texture) As #FuncPrefix + "SDL_UnlockTexture"
   RenderTargetSupported.t_bool(*renderer.Renderer) As #FuncPrefix + "SDL_RenderTargetSupported"
   SetRenderTarget.int(*renderer.Renderer, *texture.Texture) As #FuncPrefix + "SDL_SetRenderTarget"
   GetRenderTarget.r_Texture(*renderer.Renderer) As #FuncPrefix + "SDL_GetRenderTarget"
   RenderSetLogicalSize.int(*renderer.Renderer, w.int, h.int) As #FuncPrefix + "SDL_RenderSetLogicalSize"
   RenderGetLogicalSize.void(*renderer.Renderer, *w.pint, *h.pint) As #FuncPrefix + "SDL_RenderGetLogicalSize"
-  RenderSetIntegerScale.int(*renderer.Renderer, enable.t_bool) As #FuncPrefix + "SDL_RenderSetIntegerScale"
-  RenderGetIntegerScale.t_bool(*renderer.Renderer) As #FuncPrefix + "SDL_RenderGetIntegerScale"
+  CompilerIf VERSION_ATLEAST(2,0,5)
+    RenderSetIntegerScale.int(*renderer.Renderer, enable.t_bool) As #FuncPrefix + "SDL_RenderSetIntegerScale"
+    RenderGetIntegerScale.t_bool(*renderer.Renderer) As #FuncPrefix + "SDL_RenderGetIntegerScale"
+  CompilerEndIf
   RenderSetViewport.int(*renderer.Renderer, *rectx.Rect) As #FuncPrefix + "SDL_RenderSetViewport"
   RenderGetViewport.void(*renderer.Renderer, *rectx.Rect) As #FuncPrefix + "SDL_RenderGetViewport"
   RenderSetClipRect.int(*renderer.Renderer, *rectx.Rect) As #FuncPrefix + "SDL_RenderSetClipRect"
   RenderGetClipRect.void(*renderer.Renderer, *rectx.Rect) As #FuncPrefix + "SDL_RenderGetClipRect"
-  RenderIsClipEnabled.t_bool(*renderer.Renderer) As #FuncPrefix + "SDL_RenderIsClipEnabled"
+  CompilerIf VERSION_ATLEAST(2,0,4)
+    RenderIsClipEnabled.t_bool(*renderer.Renderer) As #FuncPrefix + "SDL_RenderIsClipEnabled"
+  CompilerEndIf
   RenderSetScale.int(*renderer.Renderer, scaleX.f, scaleY.f) As #FuncPrefix + "SDL_RenderSetScale"
   RenderGetScale.void(*renderer.Renderer, *scaleX.pfloat, *scaleY.pfloat) As #FuncPrefix + "SDL_RenderGetScale"
   SetRenderDrawColor.int(*renderer.Renderer, r.Uint8, g.Uint8, b.Uint8, a.Uint8) As #FuncPrefix + "SDL_SetRenderDrawColor"
@@ -3167,59 +3508,67 @@ ImportC #SDL2_lib
   RenderFillRects.int(*renderer.Renderer, *rectxs.Rect, count.int) As #FuncPrefix + "SDL_RenderFillRects"
   RenderCopy.int(*renderer.Renderer, *texture.Texture, *srcrect.Rect, *dstrect.Rect) As #FuncPrefix + "SDL_RenderCopy"
   RenderCopyEx.int(*renderer.Renderer, *texture.Texture, *srcrect.Rect, *dstrect.Rect, angle.d, *center.Point, flip.enum) As #FuncPrefix + "SDL_RenderCopyEx"
-  RenderDrawPointF.int(*renderer.Renderer, x.f, y.f) As #FuncPrefix + "SDL_RenderDrawPointF"
-  RenderDrawPointsF.int(*renderer.Renderer, *points.FPoint, count.int) As #FuncPrefix + "SDL_RenderDrawPointsF"
-  RenderDrawLineF.int(*renderer.Renderer, x1.f, y1.f, x2.f, y2.f) As #FuncPrefix + "SDL_RenderDrawLineF"
-  RenderDrawLinesF.int(*renderer.Renderer, *points.FPoint, count.int) As #FuncPrefix + "SDL_RenderDrawLinesF"
-  RenderDrawRectF.int(*renderer.Renderer, *rectx.FRect) As #FuncPrefix + "SDL_RenderDrawRectF"
-  RenderDrawRectsF.int(*renderer.Renderer, *rectxs.FRect, count.int) As #FuncPrefix + "SDL_RenderDrawRectsF"
-  RenderFillRectF.int(*renderer.Renderer, *rectx.FRect) As #FuncPrefix + "SDL_RenderFillRectF"
-  RenderFillRectsF.int(*renderer.Renderer, *rectxs.FRect, count.int) As #FuncPrefix + "SDL_RenderFillRectsF"
-  RenderCopyF.int(*renderer.Renderer, *texture.Texture, *srcrect.Rect, *dstrect.FRect) As #FuncPrefix + "SDL_RenderCopyF"
-  RenderCopyExF.int(*renderer.Renderer, *texture.Texture, *srcrect.Rect, *dstrect.FRect, angle.d, *center.FPoint, flip.enum) As #FuncPrefix + "SDL_RenderCopyExF"
+  CompilerIf VERSION_ATLEAST(2,0,10)
+    RenderDrawPointF.int(*renderer.Renderer, x.f, y.f) As #FuncPrefix + "SDL_RenderDrawPointF"
+    RenderDrawPointsF.int(*renderer.Renderer, *points.FPoint, count.int) As #FuncPrefix + "SDL_RenderDrawPointsF"
+    RenderDrawLineF.int(*renderer.Renderer, x1.f, y1.f, x2.f, y2.f) As #FuncPrefix + "SDL_RenderDrawLineF"
+    RenderDrawLinesF.int(*renderer.Renderer, *points.FPoint, count.int) As #FuncPrefix + "SDL_RenderDrawLinesF"
+    RenderDrawRectF.int(*renderer.Renderer, *rectx.FRect) As #FuncPrefix + "SDL_RenderDrawRectF"
+    RenderDrawRectsF.int(*renderer.Renderer, *rectxs.FRect, count.int) As #FuncPrefix + "SDL_RenderDrawRectsF"
+    RenderFillRectF.int(*renderer.Renderer, *rectx.FRect) As #FuncPrefix + "SDL_RenderFillRectF"
+    RenderFillRectsF.int(*renderer.Renderer, *rectxs.FRect, count.int) As #FuncPrefix + "SDL_RenderFillRectsF"
+    RenderCopyF.int(*renderer.Renderer, *texture.Texture, *srcrect.Rect, *dstrect.FRect) As #FuncPrefix + "SDL_RenderCopyF"
+    RenderCopyExF.int(*renderer.Renderer, *texture.Texture, *srcrect.Rect, *dstrect.FRect, angle.d, *center.FPoint, flip.enum) As #FuncPrefix + "SDL_RenderCopyExF"
+  CompilerEndIf
   RenderReadPixels.int(*renderer.Renderer, *rectx.Rect, format.Uint32, *pixels.pvoid, pitch.int) As #FuncPrefix + "SDL_RenderReadPixels"
   RenderPresent.void(*renderer.Renderer) As #FuncPrefix + "SDL_RenderPresent"
   DestroyTexture.void(*texture.Texture) As #FuncPrefix + "SDL_DestroyTexture"
   DestroyRenderer.void(*renderer.Renderer) As #FuncPrefix + "SDL_DestroyRenderer"
-  RenderFlush.int(*renderer.Renderer) As #FuncPrefix + "SDL_RenderFlush"
+  CompilerIf VERSION_ATLEAST(2,0,10)
+    RenderFlush.int(*renderer.Renderer) As #FuncPrefix + "SDL_RenderFlush"
+  CompilerEndIf
   GL_BindTexture.int(*texture.Texture, *texw.pfloat, *texh.pfloat) As #FuncPrefix + "SDL_GL_BindTexture"
   GL_UnbindTexture.int(*texture.Texture) As #FuncPrefix + "SDL_GL_UnbindTexture"
-  RenderGetMetalLayer.r_void(*renderer.Renderer) As #FuncPrefix + "SDL_RenderGetMetalLayer"
-  RenderGetMetalCommandEncoder.r_void(*renderer.Renderer) As #FuncPrefix + "SDL_RenderGetMetalCommandEncoder"
+  CompilerIf VERSION_ATLEAST(2,0,8)
+    RenderGetMetalLayer.r_void(*renderer.Renderer) As #FuncPrefix + "SDL_RenderGetMetalLayer"
+    RenderGetMetalCommandEncoder.r_void(*renderer.Renderer) As #FuncPrefix + "SDL_RenderGetMetalCommandEncoder"
+  CompilerEndIf
 EndImport
 ;}
 ;-----------------------
 ;- SDL_sensor.h.pbi
 ;{
 
-Enumeration SensorType
-  #SENSOR_INVALID = - 1
-  #SENSOR_UNKNOWN
-  #SENSOR_ACCEL
-  #SENSOR_GYRO
-EndEnumeration
-#STANDARD_GRAVITY = 9.80665
-Macro t_SensorID: Sint32 :EndMacro
-Macro r_Sensor: i :EndMacro
-Structure Sensor: EndStructure
-ImportC #SDL2_lib
-  NumSensors.int() As #FuncPrefix + "SDL_NumSensors"
-  _SensorGetDeviceName.r_ascii(device_index.int) As #FuncPrefix + "SDL_SensorGetDeviceName"
-  Macro SensorGetDeviceName(index): SDL::_GetAscii(SDL::_SensorGetDeviceName(index)) :EndMacro
-  SensorGetDeviceType.enum(device_index.int) As #FuncPrefix + "SDL_SensorGetDeviceType"
-  SensorGetDeviceNonPortableType.int(device_index.int) As #FuncPrefix + "SDL_SensorGetDeviceNonPortableType"
-  SensorGetDeviceInstanceID.t_SensorID(device_index.int) As #FuncPrefix + "SDL_SensorGetDeviceInstanceID"
-  SensorOpen.r_Sensor(device_index.int) As #FuncPrefix + "SDL_SensorOpen"
-  SensorFromInstanceID.r_Sensor(instance_id.t_SensorID) As #FuncPrefix + "SDL_SensorFromInstanceID"
-  _SensorGetName.r_ascii(*sensor.Sensor) As #FuncPrefix + "SDL_SensorGetName"
-  Macro SensorGetName(sensor): SDL::_GetAscii(SDL::_SensorGetName(sensor)) :EndMacro
-  SensorGetType.enum(*sensor.Sensor) As #FuncPrefix + "SDL_SensorGetType"
-  SensorGetNonPortableType.int(*sensor.Sensor) As #FuncPrefix + "SDL_SensorGetNonPortableType"
-  SensorGetInstanceID.t_SensorID(*sensor.Sensor) As #FuncPrefix + "SDL_SensorGetInstanceID"
-  SensorGetData.int(*sensor.Sensor, *data.pfloat, num_values.int) As #FuncPrefix + "SDL_SensorGetData"
-  SensorClose.void(*sensor.Sensor) As #FuncPrefix + "SDL_SensorClose"
-  SensorUpdate.void() As #FuncPrefix + "SDL_SensorUpdate"
-EndImport  
+CompilerIf VERSION_ATLEAST(2,0,9)
+  Enumeration SensorType
+    #SENSOR_INVALID = - 1
+    #SENSOR_UNKNOWN
+    #SENSOR_ACCEL
+    #SENSOR_GYRO
+  EndEnumeration
+  #STANDARD_GRAVITY = 9.80665
+  Macro t_SensorID: Sint32 :EndMacro
+  Macro r_Sensor: i :EndMacro
+  Structure Sensor: EndStructure
+  ImportC #SDL2_lib
+    NumSensors.int() As #FuncPrefix + "SDL_NumSensors"
+    _SensorGetDeviceName.r_ascii(device_index.int) As #FuncPrefix + "SDL_SensorGetDeviceName"
+    Macro SensorGetDeviceName(index): SDL::_GetAscii(SDL::_SensorGetDeviceName(index)) :EndMacro
+    SensorGetDeviceType.enum(device_index.int) As #FuncPrefix + "SDL_SensorGetDeviceType"
+    SensorGetDeviceNonPortableType.int(device_index.int) As #FuncPrefix + "SDL_SensorGetDeviceNonPortableType"
+    SensorGetDeviceInstanceID.t_SensorID(device_index.int) As #FuncPrefix + "SDL_SensorGetDeviceInstanceID"
+    SensorOpen.r_Sensor(device_index.int) As #FuncPrefix + "SDL_SensorOpen"
+    SensorFromInstanceID.r_Sensor(instance_id.t_SensorID) As #FuncPrefix + "SDL_SensorFromInstanceID"
+    _SensorGetName.r_ascii(*sensor.Sensor) As #FuncPrefix + "SDL_SensorGetName"
+    Macro SensorGetName(sensor): SDL::_GetAscii(SDL::_SensorGetName(sensor)) :EndMacro
+    SensorGetType.enum(*sensor.Sensor) As #FuncPrefix + "SDL_SensorGetType"
+    SensorGetNonPortableType.int(*sensor.Sensor) As #FuncPrefix + "SDL_SensorGetNonPortableType"
+    SensorGetInstanceID.t_SensorID(*sensor.Sensor) As #FuncPrefix + "SDL_SensorGetInstanceID"
+    SensorGetData.int(*sensor.Sensor, *data.pfloat, num_values.int) As #FuncPrefix + "SDL_SensorGetData"
+    SensorClose.void(*sensor.Sensor) As #FuncPrefix + "SDL_SensorClose"
+    SensorUpdate.void() As #FuncPrefix + "SDL_SensorUpdate"
+  EndImport  
+CompilerEndIf
 ;}
 ;-----------------------
 ;- SDL_shape.h.pbi
@@ -3264,23 +3613,33 @@ CompilerSelect #PB_Compiler_OS
     ;Structure IDirect3DDevice9 :EndStructure
     ImportC #SDL2_lib 
       SetWindowsMessageHook.void(*callback.WindowsMessageHook, *userdata.pvoid) As #FuncPrefix + "SDL_SetWindowsMessageHook"
-      Direct3D9GetAdapterIndex.int(displayIndex.int) As #FuncPrefix + "SDL_Direct3D9GetAdapterIndex"
-      RenderGetD3D9Device.r_IDirect3DDevice9(*renderer.Renderer) As #FuncPrefix + "SDL_RenderGetD3D9Device"
-      DXGIGetOutputInfo.t_bool(displayIndex.int, *adapterIndex.pint, *outputIndex.pint) As #FuncPrefix + "SDL_DXGIGetOutputInfo"
+      CompilerIf VERSION_ATLEAST(2,0,1)
+        Direct3D9GetAdapterIndex.int(displayIndex.int) As #FuncPrefix + "SDL_Direct3D9GetAdapterIndex"
+        RenderGetD3D9Device.r_IDirect3DDevice9(*renderer.Renderer) As #FuncPrefix + "SDL_RenderGetD3D9Device"
+      CompilerEndIf
+      CompilerIf VERSION_ATLEAST(2,0,2)
+        DXGIGetOutputInfo.t_bool(displayIndex.int, *adapterIndex.pint, *outputIndex.pint) As #FuncPrefix + "SDL_DXGIGetOutputInfo"
+      CompilerEndIf
     EndImport  
   CompilerCase #PB_OS_Linux
-    ImportC #SDL2_lib 
-      LinuxSetThreadPriority.int(threadID.Sint64, priority.int) As #FuncPrefix + "SDL_LinuxSetThreadPriority"
-    EndImport
+    CompilerIf VERSION_ATLEAST(2,0,9)
+      ImportC #SDL2_lib 
+        LinuxSetThreadPriority.int(threadID.Sint64, priority.int) As #FuncPrefix + "SDL_LinuxSetThreadPriority"
+      EndImport
+    CompilerEndIf
 CompilerEndSelect
-ImportC #SDL2_lib    
-  IsTablet.t_bool() As #FuncPrefix + "SDL_IsTablet"
-  OnApplicationWillTerminate.void() As #FuncPrefix + "SDL_OnApplicationWillTerminate"
-  OnApplicationDidReceiveMemoryWarning.void() As #FuncPrefix + "SDL_OnApplicationDidReceiveMemoryWarning"
-  OnApplicationWillResignActive.void() As #FuncPrefix + "SDL_OnApplicationWillResignActive"
-  OnApplicationDidEnterBackground.void() As #FuncPrefix + "SDL_OnApplicationDidEnterBackground"
-  OnApplicationWillEnterForeground.void() As #FuncPrefix + "SDL_OnApplicationWillEnterForeground"
-  OnApplicationDidBecomeActive.void() As #FuncPrefix + "SDL_OnApplicationDidBecomeActive"
+ImportC #SDL2_lib 
+  CompilerIf VERSION_ATLEAST(2,0,9)
+    IsTablet.t_bool() As #FuncPrefix + "SDL_IsTablet"
+  CompilerEndIf
+  CompilerIf VERSION_ATLEAST(2,0,12)
+    OnApplicationWillTerminate.void() As #FuncPrefix + "SDL_OnApplicationWillTerminate"
+    OnApplicationDidReceiveMemoryWarning.void() As #FuncPrefix + "SDL_OnApplicationDidReceiveMemoryWarning"
+    OnApplicationWillResignActive.void() As #FuncPrefix + "SDL_OnApplicationWillResignActive"
+    OnApplicationDidEnterBackground.void() As #FuncPrefix + "SDL_OnApplicationDidEnterBackground"
+    OnApplicationWillEnterForeground.void() As #FuncPrefix + "SDL_OnApplicationWillEnterForeground"
+    OnApplicationDidBecomeActive.void() As #FuncPrefix + "SDL_OnApplicationDidBecomeActive"
+  CompilerEndIf
 EndImport  
 ;}
 ;-----------------------
@@ -3304,12 +3663,6 @@ EndImport
 ;- SDL_version.h.pbi
 ;{
 
-Macro VERSIONNUM(X, Y, Z): ((X)*1000 + (Y)*100 + (Z)) :EndMacro
-Macro VERSION_ATLEAST(X, Y, Z): (sdl::#COMPILEDVERSION >= sdl::VERSIONNUM(X, Y, Z)) :EndMacro
-#MAJOR_VERSION = 2
-#MINOR_VERSION = 0
-#PATCHLEVEL = 12
-#COMPILEDVERSION = VERSIONNUM(#MAJOR_VERSION,#MINOR_VERSION,#PATCHLEVEL)
 Structure version Align #SDLALIGN
   major.Uint8
   minor.Uint8
@@ -3334,9 +3687,15 @@ EndImport
 #INIT_HAPTIC = $00001000
 #INIT_GAMECONTROLLER = $00002000
 #INIT_EVENTS = $00004000
-#INIT_SENSOR = $00008000
+CompilerIf VERSION_ATLEAST(2,0,9)  
+  #INIT_SENSOR = $00008000
+CompilerEndIf
 #INIT_NOPARACHUTE = $00100000
-#INIT_EVERYTHING = ( #INIT_TIMER | #INIT_AUDIO | #INIT_VIDEO | #INIT_EVENTS | #INIT_JOYSTICK | #INIT_HAPTIC | #INIT_GAMECONTROLLER | #INIT_SENSOR )
+CompilerIf VERSION_ATLEAST(2,0,9)
+  #INIT_EVERYTHING = ( #INIT_TIMER | #INIT_AUDIO | #INIT_VIDEO | #INIT_EVENTS | #INIT_JOYSTICK | #INIT_HAPTIC | #INIT_GAMECONTROLLER | #INIT_SENSOR )
+CompilerElse
+  #INIT_EVERYTHING = ( #INIT_TIMER | #INIT_AUDIO | #INIT_VIDEO | #INIT_EVENTS | #INIT_JOYSTICK | #INIT_HAPTIC | #INIT_GAMECONTROLLER)
+CompilerEndIf
 ImportC #SDL2_lib
   Init.int(flags.Uint32) As #FuncPrefix + "SDL_Init"
   InitSubSystem.int(flags.Uint32) As #FuncPrefix + "SDL_InitSubSystem"
@@ -3903,3 +4262,9 @@ Module SDL
     EndProcedure
   CompilerEndIf
 EndModule
+
+; IDE Options = PureBasic 5.72 (Windows - x64)
+; CursorPosition = 73
+; FirstLine = 54
+; Folding = -------------------------------------------------------------------------------------------------------------------
+; EnableXP

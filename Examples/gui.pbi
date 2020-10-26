@@ -15,14 +15,19 @@ DeclareModule GUI
   EndEnumeration
   
   EnumerationBinary state
-    #State_hide 
-    #State_disabled
+    #State_None = 0
+    #State_Hide 
+    #State_Disabled
     #State_OnTop
     #State_OnBack
-    #State_HandleKeyboard
+    ;#State_HandleKeyboard
     #State_ClipOutside
+    #State_Template
+    
+    #State_UserPushed
+    #State_UserHighlight
   EndEnumeration
-
+  #StateMask_ReCalc = #State_Hide | #State_Disabled | #State_OnTop | #State_OnBack | #State_ClipOutside
   
   Enumeration Class_tex
     #tex_stretch
@@ -35,9 +40,7 @@ DeclareModule GUI
     #tex_AnchorTop = 0 
     #tex_AnchorRight = 1<<8
     #tex_AnchorBottom 
-  EndEnumeration
-  
-  
+  EndEnumeration  
   
   Enumeration Class_anchor
     #Anchor_None=0
@@ -47,8 +50,10 @@ DeclareModule GUI
     #Anchor_Right
     #Anchor_Center
     #Anchor_Direct
-    #Anchor_MaxWidth
-    #Anchor_MaxHeight
+    #Anchor_MaxSize
+    #Anchor_Size
+    #Anchor_SizeWidth
+    #Anchor_SizeHeight
   EndEnumeration
   
   EnumerationBinary Size
@@ -67,8 +72,8 @@ DeclareModule GUI
   EndEnumeration
   
   Enumeration hitbox
-    #Event_enter
-    #Event_leave
+    #Event_Enter
+    #Event_Leave
     #Event_LeftClick
     #Event_LeftDoubleClick
     #Event_LeftDown
@@ -77,35 +82,31 @@ DeclareModule GUI
     #Event_RightDoubleClick
     #Event_RightDown       
     #Event_RightUp         
-    #Event_sizing
-    #Event_moving
+    #Event_Sizing
+    #Event_Moving
     #Event_StateChange    
     #Event_Delete
     #Event_UserData
+    #Event_Load
+    
+    #Event_UserAction
     
     #Event_MaxEvent
   EndEnumeration
   
-  ;- structures
-  Structure sAnchor    
-    offset.l
-    fromAnchor.l
-    *FromFrame.mFrame
-  EndStructure
-  Structure sHitbox
-    rect.sdl::rect
-    *frame.mFrame  
-  EndStructure
-  
   ;- Prototypes
-  Prototype _ProtHitboxCallback(what,*frame,dat.i)
+  Prototype _ProtHitboxCallback(*frame,*data)
   
   ;- Class declarations
   ;- both
   Interface _both Extends class::base
-    NewChild(name.s, state.l = 0)
+    NewChild(name.s, state.l = 0, template.s="")
     GetFrame(name.s)
+    GetNamedFont(name.s)
+    GetNamedTexture(name.s)
+    GetRenderer()
   EndInterface   
+  
   ;- -Frame
   Interface Frame Extends _both
     SetX(offset.l, anchor.l = #Anchor_None, name.s = "")
@@ -123,24 +124,25 @@ DeclareModule GUI
     SetPosition(x.l = #PB_Ignore, y.l = #PB_Ignore, w.l = #PB_Ignore, h.l = #PB_Ignore)
     SetState(state.l, flag.l)
     GetState.l(state.l)
-    GetName.s()
-    SetOn(event.l,*func,dat.i=#Null)
-    DoOn(event.l)
+    GetName.s(complete.l = #True)
+    BindEvent(event.l,*func)
+    CallEventBinding(event.l,*data)
     StartUserSizing(what.l)
     StartUserMoving()
     StopUserSizingMoving()    
     SetBound(minWidth.l, minHeight.l, maxWidth.l, minWidth.l)
+    
     SetUserData(name.s,value,silent=#False)
     GetUserData(name.s)
     SetUserDataF(name.s,value.f,silent=#False)
     GetUserDataF.f(name.s)
     SetUserDataS(name.s,value.s,silent=#False)
     GetUserDataS.s(name.s)
-    
   
     SetTexture(*rendererTexture,x1.f,y1.f,x2.f,y2.f,style.l=#tex_stretch)
+    SetNamedTexture(Name.s,x1.f,y1.f,x2.f,y2.f,style.l=#tex_stretch)
     SetText(*font,text.s,colorRGBA,style.l=#tex_stretch)
-    GetTextTexture(*font,text.s,colorRGBA,style.l)
+    ;GetTextTexture(*font,text.s,colorRGBA,style.l)
     
     GetParent()
     
@@ -153,7 +155,23 @@ DeclareModule GUI
   Interface Class Extends _both
     Draw()
     ReCalculate()
-    GetHit(*sdlpoint, MouseButton.l, MouseClicks.l)    
+    GetHit(*sdlpoint, MouseButton.l, MouseClicks.l)
+    NewTemplate(name.s)
+    
+    LoadXML.l(file.s)
+    LoadNamedFont.l(name.s, file.s, size.l)
+    LoadNamedTexture.l(name.s, file.s)
+    
+    SetUserData(frame.s, name.s,value,silent=#False)
+    GetUserData(frame.s, name.s)
+    SetUserDataF(frame.s, name.s,value.f,silent=#False)
+    GetUserDataF.f(frame.s, name.s)
+    SetUserDataS(frame.s, name.s,value.s,silent=#False)
+    GetUserDataS.s(frame.s, name.s)
+    
+    SetState(frame.s, state.l, flag.l)
+    GetState.l(frame.s, state.l)
+    
   EndInterface  
   class::Announce( Class,(*render.renderer::Class) )
   
@@ -166,12 +184,29 @@ EndDeclareModule
 ;- module
 ;-
 Module GUI
+  Macro _dquote
+    "
+  EndMacro
+  
   #BaseElementName = "/"
+  #TemplateElementName = "$"
   #mask_tex=$ff
+  
+  ;- structures
+  Structure sAnchor    
+    offset.l
+    fromAnchor.l
+    *FromFrame.mFrame
+  EndStructure
+  
+  Structure sHitbox
+    rect.sdl::rect
+    *frame.mFrame  
+  EndStructure
   
   Structure sUserData_base
     name.s
-    *next.sUserData
+    *next.sUserData_base
   EndStructure
   Structure sUserdata_i Extends sUserData_base
     value.i
@@ -197,7 +232,7 @@ Module GUI
     Right.sAnchor 
     
     on._ProtHitboxCallback[#Event_MaxEvent]
-    onData.i[#Event_MaxEvent]
+
     MinWidth.l
     MaxWidth.l
     MinHeight.l
@@ -217,11 +252,16 @@ Module GUI
   EndStructure
   class::Create( Frame, (*Class, name.s) )
   
+  
+
+    
   ;- -Class
   Structure mClass Extends class::mBase
     render.renderer::Class
     NeedRecalc.l
     *baseElement.mFrame
+    *templateElement.mFrame
+    
     *LastMouseFrame.mFrame
     List HitBox.sHitbox()
     MouseButton.l
@@ -235,6 +275,8 @@ Module GUI
     difPoint.sdl::point
     sizingWhat.l
     globalValid.l
+    Map *Fonts.SDL::TTF_Font()
+    Map *Textures.SDL::Texture()
   EndStructure
   class::Create( Class,(*render.renderer::Class) )
   
@@ -242,7 +284,11 @@ Module GUI
   ;- declares
   Declare Class_GetFrame(*self.mClass, name.s)
   Declare Frame_SortUp(*self.mFrame)
-  Declare.s Frame_GetName(*self.mFrame)
+  Declare.s Frame_GetName(*self.mFrame, complete.l = #True)
+  Declare Frame_NewChild(*self.mFrame, name.s, state.l, template.s)
+  Declare Frame_SetUserData(*self.mFrame, name.s, value.i,silent=#False)
+  Declare Frame_SetUserDataF(*self.mFrame, name.s, value.f,silent=#False)
+  Declare Frame_SetUserDataS(*self.mFrame, name.s, value.s,silent=#False)
   ;-
   ;- procedures
   ;-
@@ -278,7 +324,7 @@ Module GUI
   Procedure Frame__MaxWidth(*frame.mFrame, *valid.integer)
     Protected.mframe *cur = *frame\child
     Protected.l max,off
-    
+     
     While *cur      
       If Not *cur\state & #State_OnBack
         If *cur\Left\FromFrame = *frame And *cur\left\fromAnchor = #Anchor_Center
@@ -324,6 +370,7 @@ Module GUI
       *cur = *cur\next
       
     Wend
+   
     ProcedureReturn max
   EndProcedure
   
@@ -334,7 +381,7 @@ Module GUI
     While *cur      
       If Not *cur\state & #State_OnBack
         If *cur\top\FromFrame = *frame And *cur\top\fromAnchor = #Anchor_Center
-          off =0          
+          off =0   
         ElseIf *cur\top\fromAnchor = #Anchor_Direct
           Select *cur\top\offset
             Case #Offset_FrameSize : off = *cur\rect\h
@@ -398,8 +445,16 @@ Module GUI
         EndSelect 
         
         Select \fromAnchor
-          Case #Anchor_MaxHeight
+          Case #Anchor_MaxSize
             *frame\rect\h = Frame__MaxHeight( *frame, @*frame\valid\h ) + off
+            
+          Case #Anchor_Size, #Anchor_SizeHeight
+            *frame\rect\h = \FromFrame\rect\h + off
+            *frame\valid\h & \FromFrame\valid\h 
+            
+          Case #Anchor_SizeWidth
+            *frame\rect\h = \FromFrame\rect\w + off
+            *frame\valid\h & \FromFrame\valid\w 
             
           Case #Anchor_Top
             *frame\rect\h = \FromFrame\rect\y + off - *frame\rect\y  + \FromFrame\base\y - *frame\base\y
@@ -433,8 +488,16 @@ Module GUI
         EndSelect
         
         Select \fromAnchor
-          Case #Anchor_MaxWidth
+          Case #Anchor_MaxSize
             *frame\rect\w = Frame__MaxWidth( *frame, @*frame\valid\w ) + off
+            
+          Case #Anchor_Size, #Anchor_SizeWidth
+            *frame\rect\w = \FromFrame\rect\w + off 
+            *frame\valid\w & \FromFrame\valid\w  
+            
+          Case #Anchor_SizeHeight
+            *frame\rect\w = \FromFrame\rect\h + off 
+            *frame\valid\w & \FromFrame\valid\h  
              
           Case #Anchor_Left
             *frame\rect\w = \FromFrame\rect\x + off - *frame\rect\x + \FromFrame\base\x - *frame\base\x
@@ -543,11 +606,11 @@ Module GUI
       *cur\valid\w = #False
       *cur\valid\h = #False
             
-      If Not *cur\state & #State_hide      
+      ;If Not *cur\state & #State_hide      
         If *cur\child
           Frame__InvalideAllElements( *cur\child)
         EndIf
-      EndIf  
+      ;EndIf  
       
       *cur = *cur\next
     Wend
@@ -596,6 +659,8 @@ Module GUI
           ok = sdl::IntersectRect(rect, *cur\parent\globalClip, *cur\globalClip)
         EndIf
         
+        ;Debug Frame_GetName(*frame)+" ok:" + ok + " rect:"+ rect\x+" "+rect\y+" "+rect\w+" "+rect\h
+        
         If ok
           
           
@@ -622,45 +687,47 @@ Module GUI
   Procedure Frame__SetAnchor(*frame.mFrame,which.l,offset.l,anchor.l = #Anchor_None, *AnchorFrame = #Null)
     Protected *anchor.sAnchor
     
-    *frame\mClass\NeedRecalc = #True
-    
     If anchor = #Anchor_None And ( offset < - #Offset_SpecialStart Or offset > #Offset_SpecialStart )
       anchor = #Anchor_Direct
       *AnchorFrame = *frame
     EndIf
     
-    
-    If anchor = #Anchor_None Or *AnchorFrame = #Null
-      Select which
-        Case #Anchor_Left : *frame\rect\x = offset : *anchor = *frame\Left
-        Case #Anchor_Top : *frame\rect\y = offset : *anchor = *frame\Top
-        Case #Anchor_Right : *frame\rect\w = offset : *anchor = *frame\Right
-        Case #Anchor_Bottom : *frame\rect\h = offset : *anchor = *frame\Bottom
-      EndSelect
-      *anchor\fromAnchor = #Anchor_None    
-      *anchor\FromFrame = #Null
-      ProcedureReturn
-    EndIf
+    Select which
+      Case #Anchor_Left :  *anchor = *frame\Left
+      Case #Anchor_Top :  *anchor = *frame\Top
+      Case #Anchor_Right :  *anchor = *frame\Right
+      Case #Anchor_Bottom :  *anchor = *frame\Bottom
+    EndSelect
     
     If (which=#anchor_top And anchor = #anchor_top And *AnchorFrame = *frame\parent) Or 
        (which=#anchor_left And anchor = #Anchor_Left And *AnchorFrame = *frame\parent)
       anchor = #Anchor_Direct 
       *AnchorFrame = *frame
-    EndIf       
+    ElseIf anchor = #Anchor_None Or *AnchorFrame = #Null
+      anchor = #Anchor_None
+      *AnchorFrame = #Null
+    EndIf
     
-    Select which
-      Case #Anchor_Left : *anchor = *frame\Left
-      Case #Anchor_Right : *anchor = *frame\Right
-      Case #Anchor_Top : *anchor = *frame\Top
-      Case #Anchor_Bottom : *anchor = *frame\Bottom      
-      Default
-        ProcedureReturn
-    EndSelect
+    If *anchor\offset = offset And *anchor\fromAnchor = anchor And *anchor\FromFrame = *AnchorFrame
+      ProcedureReturn
+    EndIf
     
+      
+    *frame\mClass\NeedRecalc = #True
+
     *anchor\offset = offset
-    *anchor\fromAnchor = anchor
-    *anchor\FromFrame = *AnchorFrame     
-    
+    *anchor\fromAnchor = anchor 
+    *anchor\FromFrame = *AnchorFrame
+      
+    If anchor = #Anchor_None
+      Select which
+        Case #Anchor_Left : *frame\rect\x = offset 
+        Case #Anchor_Top : *frame\rect\y = offset 
+        Case #Anchor_Right : *frame\rect\w = offset 
+        Case #Anchor_Bottom : *frame\rect\h = offset 
+      EndSelect      
+    EndIf
+      
     Frame__CalculateFrame(*frame)
         
   EndProcedure
@@ -684,10 +751,9 @@ Module GUI
         If *cur\tex
           *cur\tex\SetClip( *cur\texClip\x, *cur\texClip\y, *cur\texClip\w, *cur\texClip\h )
           *frame\mClass\render\SetClip( *cur\globalClip )
+          
 ;           *frame\mclass\render\SetDrawColor(128,128,128,255)
 ;           *frame\mClass\render\DrawRect( *cur\globalClip )
-          
-          ;Debug "draw:"+rect\x+" "+rect\y+" "+rect\w+" "+rect\h
           
           Select *cur\texStyle & #mask_tex
             Case #tex_stretch
@@ -780,10 +846,16 @@ Module GUI
     ProcedureReturn *ret
   EndProcedure
   
-  Macro Frame__CallEventCallback(_frame_,_event_,_info_=#Null)
-    If _frame_\on[_event_]
-      _frame_\on[_event_]( _info_, _frame_, _frame_\onData[_event_] )
-    EndIf
+  Macro Frame__CallEventBinding(_frame_,_event_,_info_,_force_=#False)
+    CompilerIf _force_
+      If _frame_\on[_event_] And Not _frame_\state & #State_Template
+        _frame_\on[_event_]( _frame_, _info_ )
+      EndIf
+    CompilerElse
+      If _frame_\on[_event_] 
+        _frame_\on[_event_]( _frame_, _info_ )
+      EndIf
+    CompilerEndIf
   EndMacro
     
   Procedure.l Frame__IsInheritedState(*frame.mFrame,state.l)
@@ -804,10 +876,206 @@ Module GUI
     *self\tex = #Null
   EndProcedure
   
+  Procedure frame__FindUserData(*self.mframe,name.s)
+    Protected.sUserData_base *cur = *self\userData
+    While *cur
+      If *cur\name = name
+        ProcedureReturn *cur
+      EndIf
+      *cur = *cur\next
+    Wend
+    ProcedureReturn #Null
+  EndProcedure
+  
+  Procedure Frame__CopyData(*dest.mframe, *src.mframe)
+    Protected.mFrame *cur,*child
+    
+    *cur = *src\child
+    While *cur
+      *child = Frame_NewChild(*dest, *cur\name, *cur\state & ~#State_Template, "")
+      Frame__CopyData(*child, *cur)
+      *cur = *cur\next
+    Wend
+    
+    *dest\rect = *src\rect
+    *dest\base = *src\base
+    
+       
+    *dest\MinWidth = *src\MinWidth
+    *dest\MaxWidth = *src\MaxWidth
+    *dest\MinHeight = *src\MinHeight
+    *dest\MaxHeight = *src\MaxHeight
+    *dest\tex = *src\tex
+    *dest\texClip = *src\texClip
+    *dest\texStyle = *src\texStyle
+    *dest\texOwnerSelf = #False
+    *dest\globalClip = *src\globalClip
+    
+    Protected.sUserData_base *ud = *src\userData
+    Protected.sUserdata_i *udi
+    Protected.sUserdata_f *udf
+    Protected.sUserdata_s *uds
+    While *ud
+      Select Asc(*ud\name)
+        Case 'i'
+          *udi = *ud
+          Frame_SetUserData(*dest, Mid(*ud\name,3), *udi\value)
+        Case 'f'
+          *udf = *ud
+          Frame_SetUserDataF(*dest, Mid(*ud\name,3),*udf\value)
+        Case 's'
+          *uds = *ud
+          Frame_SetUserDataS(*dest, Mid(*ud\name,3),*udS\value)
+      EndSelect         
+      *ud = *ud\next  
+    Wend
+        
+    
+  EndProcedure
+  
+  Procedure Frame__CopyAnchor(*dest.mframe, *src.mframe, *baseDest.mframe)
+    Protected.mFrame *cur,*child
+    Protected.s name
+    Protected.l pos
+    
+    *cur = *src\child
+    *child = *dest\child
+    While *cur
+      Frame__CopyAnchor( *child, *cur, *baseDest )
+      *cur = *cur\next
+      *child = *child\next
+    Wend
+    
+    *dest\Top = *src\Top    
+    If *src\Top\FromFrame
+      name= Mid( Frame_GetName(*src\top\FromFrame) ,3) ;remove $.
+      pos = FindString(name,".")      
+      If pos
+        name = Mid(name, pos +1)
+        *dest\top\FromFrame = Frame__FindFrame(*baseDest\child,name)
+      Else
+        *dest\top\FromFrame = *baseDest
+      EndIf
+    EndIf
+    
+    *dest\Bottom = *src\Bottom
+    If *src\Bottom\FromFrame
+      name= Mid( Frame_GetName(*src\Bottom\FromFrame) ,3) ;remove $.
+      pos = FindString(name,".")      
+      If pos 
+        name = Mid(name, pos +1)
+        *dest\Bottom\FromFrame = Frame__FindFrame(*baseDest\child,name)
+      Else
+        *dest\Bottom\FromFrame = *baseDest
+      EndIf
+    EndIf
+    
+    *dest\Left = *src\Left
+    If *src\Left\FromFrame
+      name= Mid( Frame_GetName(*src\Left\FromFrame) ,3) ;remove $.
+      pos = FindString(name,".")      
+      If pos 
+        name = Mid(name, pos +1)
+        *dest\Left\FromFrame = Frame__FindFrame(*baseDest\child,name)
+      Else
+        *dest\Left\FromFrame = *baseDest
+      EndIf
+    EndIf
+    
+    
+    *dest\Right = *src\Right
+    If *src\Right\FromFrame
+      name= Mid( Frame_GetName(*src\Right\FromFrame) ,3) ;remove $.
+      pos = FindString(name,".")      
+      If pos
+        name = Mid(name, pos +1)
+        *dest\Right\FromFrame = Frame__FindFrame(*baseDest\child,name)
+      Else
+        *dest\Right\FromFrame = *baseDest
+      EndIf
+    EndIf
+    
+    Frame__CalculateFrame(*dest)
+       
+  EndProcedure
+  
+  Procedure Frame__CopyBinding(*dest.mframe, *src.mframe)
+    Protected.mFrame *cur,*child
+    *cur = *src\child
+    *child = *dest\child
+    While *cur
+      Frame__CopyBinding( *child, *cur)
+      *cur = *cur\next
+      *child = *child\next
+    Wend
+    
+    Protected.l i
+    For i=0 To #Event_MaxEvent -1
+      *dest\on[i] = *src\on[i]
+    Next     
+  EndProcedure
+  
+  Procedure Frame__CopyCallBinding(*dest.mframe, *src.mframe)
+    Protected.mFrame *cur,*child
+    If *src
+      *cur = *src\child
+    EndIf
+    *child = *dest\child
+    While *child
+      Frame__CopyCallBinding( *child, *cur)
+      If *cur
+        *cur = *cur\next
+      EndIf
+      *child = *child\next
+    Wend
+    
+    Frame__CallEventBinding(*dest, #Event_Load, *src)
+  EndProcedure
+  
+  Procedure Frame__NewChild(*self.mFrame, name.s, state.l, template.s, doCallback=#True)
+    Protected.mFrame *new = Object::New( Frame, (*self\mClass, name ) )
+    Protected.mFrame *cur
+    
+    *new\parent = *self
+    *new\state = state
+        
+    If *self\state & #State_Template
+      *new\state | #State_Template
+    EndIf
+    
+    
+    If *self\child = #Null
+      *self\child = *new
+      
+    Else    
+      *cur = *self\child
+      While *cur\next
+        *cur = *cur\next
+      Wend
+      *cur\next = *new
+    EndIf
+    
+    *self\mClass\NeedRecalc = #True
+    
+    If template<>""
+      Protected.mFrame *tpl = Frame__FindFrame(*self\mClass\templateElement\child, template)
+      
+      If *tpl
+        Frame__CopyData(*new, *tpl)
+        Frame__CopyAnchor(*new, *tpl, *new)
+        Frame__CopyBinding(*new, *tpl)
+        If doCallback
+          Frame__CopyCallBinding(*new, *tpl)
+        EndIf
+      EndIf
+    EndIf
+    
+    ProcedureReturn *new
+  EndProcedure 
+  
   ;-
   class::Method Procedure Frame_Frame(*self.mFrame, *Class, name.s)
     Static count
-    ;Debug "[Frame] VIRTUAL CLASS!"
     *self\MinHeight = 10
     *self\MaxHeight = #Offset_SpecialStart-1
     *self\MinWidth = 10
@@ -824,11 +1092,10 @@ Module GUI
   EndProcedure
   
   class::Method Procedure Frame__Delete(*self.mFrame)    
-    Frame__CallEventCallback(*self, #Event_Delete)
+    Frame__CallEventBinding(*self, #Event_Delete, #Null, #True)
     
     Frame__FreeTexture(*self)
-    
-    
+        
     Protected.mframe *frame,*nextFrame
     *frame = *self\child
     While *frame
@@ -848,6 +1115,8 @@ Module GUI
   EndProcedure
 
   ;-
+  
+  
   
   class::Method Procedure Frame_GetFrame(*self.mframe, name.s)
     Protected *AnchorFrame
@@ -878,19 +1147,19 @@ Module GUI
   
   class::Method Procedure Frame_SetX(*self.mFrame, offset.l, anchor.l, name.s)
     Frame__SetAnchor(*self, #Anchor_Left, offset, anchor,Frame_GetFrame(*self,name) )
-    Frame__CallEventCallback( *self, #Event_moving )
+    Frame__CallEventBinding( *self, #Event_moving, #Null )
   EndProcedure
   class::Method Procedure Frame_SetY(*self.mFrame, offset.l, anchor.l, name.s)
     Frame__SetAnchor(*self, #Anchor_Top, offset, anchor, Frame_GetFrame(*self,name))
-    Frame__CallEventCallback( *self, #Event_moving )
+    Frame__CallEventBinding( *self, #Event_moving, #Null )
   EndProcedure
   class::Method Procedure Frame_SetW(*self.mFrame, offset.l, anchor.l, name.s)
     Frame__SetAnchor(*self, #Anchor_Right, offset, anchor, Frame_GetFrame(*self,name))
-    Frame__CallEventCallback( *self, #Event_sizing )
+    Frame__CallEventBinding( *self, #Event_sizing, #Null )
   EndProcedure
   class::Method Procedure Frame_SetH(*self.mFrame, offset.l, anchor.l, name.s)
     Frame__SetAnchor(*self, #Anchor_Bottom, offset, anchor, Frame_GetFrame(*self,name))
-    Frame__CallEventCallback( *self, #Event_sizing )
+    Frame__CallEventBinding( *self, #Event_sizing, #Null )
   EndProcedure
   class::Method Procedure.l Frame_GetX(*self.mFrame)
     ProcedureReturn *self\rect\x
@@ -929,24 +1198,22 @@ Module GUI
       EndIf
       
       If w <> #PB_Ignore Or h <> #PB_Ignore
-        Frame__CallEventCallback( *self, #Event_sizing )
+        Frame__CallEventBinding( *self, #Event_sizing, #Null )
       ElseIf x <> #PB_Ignore And y <> #PB_Ignore
         ;don't send move when sizing!
-        Frame__CallEventCallback( *self, #Event_moving )
+        Frame__CallEventBinding( *self, #Event_moving, #Null )
       EndIf
       
     EndWith
   EndProcedure
   
-  class::Method Procedure Frame_SetOn(*self.mFrame,event.l,*func,dat.i=#Null)
+  class::Method Procedure Frame_BindEvent(*self.mFrame,event.l,*func)
     *self\on[event] = *func
-    *self\onData[event] = dat
   EndProcedure
   
-  class::Method Procedure Frame_DoOn(*self.mFrame,event.l)
-    Frame__CallEventCallback( *self, event )
-  EndProcedure
-    
+  class::Method Procedure Frame_CallEventBinding(*self.mFrame,event.l, *data)
+    Frame__CallEventBinding( *self, event, *data )
+  EndProcedure    
   
   class::Method Procedure Frame_GetRelativMouse(*self.mFrame, *point.sdl::Point)
     *point\x = *self\mClass\MousePoint\x - *self\rect\x - *self\base\x
@@ -955,21 +1222,27 @@ Module GUI
   EndProcedure
   
   class::Method Procedure Frame_SetState(*self.mFrame,state.l,flag.l)
+    Protected.l oldState = *self\state
     Select flag
       Case #Enable : *self\state | state
       Case #Disable : *self\state & ~state
       Case #Toogle : *self\state ! state
     EndSelect
     
-    Frame__CallEventCallback(*self, #Event_StateChange)
+    Frame__CallEventBinding(*self, #Event_StateChange, state)
     
-    *self\mClass\NeedRecalc = #True
+    If *self\state & #StateMask_ReCalc <> oldState & #StateMask_ReCalc
+      *self\mClass\NeedRecalc = #True
+    EndIf
   EndProcedure
   class::Method Procedure.l Frame_GetState(*self.mFrame,state.l)
     ProcedureReturn Bool(*self\state & state)
   EndProcedure
-  class::Method Procedure.s Frame_GetName(*self.mFrame)
-    ProcedureReturn Frame__GetName(*self)
+  class::Method Procedure.s Frame_GetName(*self.mFrame, complete.l = #True)
+    If complete
+      ProcedureReturn Frame__GetName(*self)
+    EndIf
+    ProcedureReturn *self\name
   EndProcedure
   class::Method Procedure Frame_StartUserSizing(*self.mFrame, what.l)
     *self\mClass\movingFrame = #Null
@@ -1007,17 +1280,6 @@ Module GUI
     EndIf
   EndProcedure
   
-  Procedure frame__FindUserData(*self.mframe,name.s)
-    Protected.sUserData_base *cur = *self\userData
-    While *cur
-      If *cur\name = name
-        ProcedureReturn *cur
-      EndIf
-      *cur = *cur\next
-    Wend
-    ProcedureReturn #Null
-  EndProcedure
-  
   class::Method Procedure Frame_SetUserData(*self.mFrame, name.s, value.i,silent=#False)
     Protected.sUserData_i *cur = *self\userData
     
@@ -1031,7 +1293,7 @@ Module GUI
     EndIf
     *cur\value = value
     If Not silent
-      Frame__CallEventCallback(*self, #Event_UserData,@name)
+      Frame__CallEventBinding(*self, #Event_UserData, @name)
     EndIf
     
   EndProcedure
@@ -1057,7 +1319,7 @@ Module GUI
     EndIf
     *cur\value = value
     If Not silent
-      Frame__CallEventCallback(*self, #Event_UserData,@name)
+      Frame__CallEventBinding(*self, #Event_UserData, @name)
     EndIf
     
   EndProcedure
@@ -1083,7 +1345,7 @@ Module GUI
     EndIf
     *cur\value = value
     If Not silent
-      Frame__CallEventCallback(*self, #Event_UserData, @name)
+      Frame__CallEventBinding(*self, #Event_UserData, @name)
     EndIf
     
   EndProcedure
@@ -1097,39 +1359,60 @@ Module GUI
   EndProcedure
   
   class::Method Procedure Frame_SetTexture(*self.mFrame, *tex.renderer::texture, x1.f, y1.f, x2.f, y2.f, style.l)
-    Protected.l tw = *tex\GetWidth()
-    Protected.l th = *tex\GetHeight()
+    Protected.sdl::rect old = *self\texClip
     
     Frame__FreeTexture(*self)
     
-    With *self
-      \tex = *tex
-      \texClip\x = tw * x1
-      \texClip\y = th * y1
-      \texClip\w = tw * (x2-x1) 
-      \texClip\h = th * (y2-y1)
-      \texStyle = style    
-      \texOwnerSelf = #False
-    EndWith
+    
+    If *tex = #Null
+      With *self
+        \tex = #Null
+        \texClip\x = 0
+        \texClip\y = 0
+        \texClip\w = 0
+        \texClip\h = 0
+        \texStyle = #tex_single
+        \texOwnerSelf = #False
+      EndWith
+      
+    Else
+      Protected.l tw = *tex\GetWidth()
+      Protected.l th = *tex\GetHeight()      
+      With *self
+        \tex = *tex
+        \texClip\x = tw * x1
+        \texClip\y = th * y1
+        \texClip\w = tw * (x2-x1) 
+        \texClip\h = th * (y2-y1)
+        \texStyle = style    
+        \texOwnerSelf = #False
+      EndWith
+    EndIf
+    
+    If old\w <> *self\texClip\w Or old\h <> *self\texClip\h
+      *self\mClass\NeedRecalc = #True
+      Frame__CalculateFrame(*self)
+    EndIf
   EndProcedure
   
-  class::Method Procedure Frame_GetTextTexture(*self.mFrame,*font,text.s,colorRGBA,style.l)
-    Protected.sdl::Color color
-    color\a=Alpha(colorRGBA):color\r=Red(colorRGBA):color\g=Green(colorRGBA):color\b=Blue(colorRGBA)
-    ProcedureReturn *self\mClass\render\RenderText( *font, text, color)
+  class::Method Procedure Frame_SetNamedTexture(*self.mFrame, name.s, x1.f, y1.f, x2.f, y2.f, style.l)
+    Frame_SetTexture(*self.mFrame, *self\mClass\Textures(name), x1.f, y1.f, x2.f, y2.f, style.l)
   EndProcedure
-    
+  
+;   class::Method Procedure Frame_GetTextTexture(*self.mFrame,*font,text.s,colorRGBA,style.l)
+;     Protected.sdl::Color color
+;     color\a=Alpha(colorRGBA):color\r=Red(colorRGBA):color\g=Green(colorRGBA):color\b=Blue(colorRGBA)
+;     ProcedureReturn *self\mClass\render\RenderText( *font, text, color)
+;   EndProcedure
     
   class::Method Procedure Frame_SetText(*self.mFrame,*font,text.s,colorRGBA,style.l)
     Frame__FreeTexture(*self)
-    Frame_SetTexture(*self, Frame_GetTextTexture(*self,*font,text,colorRGBA,style), 0,0,1,1,style)
+    Protected.sdl::color col
+    col\ r = Red(colorRGBA) : col\g = Green(colorRGBA) : col\b = Blue(colorRGBA) : col\a = Alpha(colorRGBA)
+    Protected.renderer::Texture *tex = *self\mClass\render\RenderText( *font, text, col)
+    
+    Frame_SetTexture(*self, *tex, 0,0,1,1,style)
     *self\texOwnerSelf = #True    
-  EndProcedure
-  
-  
-  
-  class::Method Procedure Frame_GetParentElement(*self.mFrame)
-    ProcedureReturn *self\parent
   EndProcedure
 
   class::Method Procedure Frame_SortUp(*self.mFrame)
@@ -1203,36 +1486,35 @@ Module GUI
     *self\mClass\NeedRecalc = #True
   EndProcedure  
  
-  class::Method Procedure Frame_NewChild(*self.mFrame, name.s, state.l)
-    Protected.mFrame *new = Object::New( Frame, (*self\mClass, name ) )
-    *new\parent = *self
-    *new\state = state
-    ;Debug name+" = "+state
-    
-    If *self\child = #Null
-      *self\child = *new
-      ProcedureReturn *new
-    EndIf
-    
-    *self = *self\child
-    While *self\next
-      *self = *self\next
-    Wend
-    *self\next = *new
-    
-    ProcedureReturn *new
-  EndProcedure  
+  class::Method Procedure Frame_NewChild(*self.mFrame, name.s, state.l, template.s)
+    ProcedureReturn Frame__NewChild(*self.mFrame, name.s, state.l, template.s)
+  EndProcedure
+  
+   
   class::Method Procedure Frame_GetParent(*self.mFrame)
     ProcedureReturn *self\parent
   EndProcedure
   
+  class::Method Procedure Frame_GetNamedFont(*self.mFrame, name.s)
+    ProcedureReturn *self\mClass\fonts(name)
+  EndProcedure
   
+  class::Method Procedure Frame_GetNamedTexture(*self.mFrame, name.s)
+    ProcedureReturn *self\mClass\Textures(name)
+  EndProcedure
+  
+  class::Method Procedure Frame_GetRenderer(*self.mFrame)
+    ProcedureReturn *self\mClass\render
+  EndProcedure
+    
   ;-
   
   
   
   class::Method Procedure.l Class_Class(*self.mClass, *render.renderer::Class)
     *self\baseElement = Object::New(Frame,(*self, #BaseElementName))
+    *self\templateElement = Object::New(Frame,(*self, #TemplateElementName))
+    *self\templateElement\state = #State_Template
     
     With *self
       \render = *render  
@@ -1245,16 +1527,36 @@ Module GUI
   EndProcedure
   
   class::Method Procedure.l Class__Delete(*self.mClass)
-    Object::Delete( *self\baseElement )
+    Object::Delete( *self\templateElement )
+    Object::Delete( *self\baseElement )  
+    
+    ForEach *self\Fonts()
+      sdl::TTF_CloseFont( *self\Fonts() )
+    Next
+    ForEach *self\Textures()
+      Object::Delete( *self\Textures() )
+    Next
+
   EndProcedure
   
-  class::Method Procedure.l Class_NewChild(*self.mClass, name.s, state.l)
-    ProcedureReturn Frame_NewChild( *self\baseElement, name.s, state)
+  ;-
+  
+  class::Method Procedure Class_GetRenderer(*self.mClass)
+    ProcedureReturn *self\render
+  EndProcedure
+  
+  class::Method Procedure.l Class_NewChild(*self.mClass, name.s, state.l, template.s)    
+    ProcedureReturn Frame_NewChild( *self\baseElement, name.s, state, template.s)
+  EndProcedure
+  
+  class::Method Procedure.l Class_NewTemplate(*self.mClass, name.s)
+    ProcedureReturn Frame_NewChild( *self\templateElement, name.s, #Null, "")
   EndProcedure
   
   class::Method Procedure Class_ReCalculate(*self.mClass) 
     Protected.l i
     *self\baseElement\globalClip = *self\baseElement\rect
+    
     
     Frame__InvalideAllElements( *self\baseElement\child)
     Repeat
@@ -1266,7 +1568,7 @@ Module GUI
     Frame__CalculateAllHitboxes( *self\baseElement\child )
     
     
-    ;Debug "globalvalid:"+ *self\globalValid+" "+i
+    Debug "globalvalid:"+ *self\globalValid+" "+i
     
     *self\NeedRecalc = #False
   EndProcedure
@@ -1293,7 +1595,6 @@ Module GUI
           
 ;                    *self\render\SetDrawColor(255,0,0,255)
 ;                    *self\render\DrawRect( \rect )
-;           Debug Frame_GetName(*ret)
           Break
         Else
 ;                    *self\render\SetDrawColor(0,255,255,255)
@@ -1308,11 +1609,11 @@ Module GUI
       If *ret <> *self\LastMouseFrame
         
         If *self\LastMouseFrame 
-          Frame__CallEventCallback(*self\LastMouseFrame, #Event_leave)          
+          Frame__CallEventBinding(*self\LastMouseFrame, #Event_leave, #Null)          
         EndIf
         
         If *ret 
-          Frame__CallEventCallback(*ret, #Event_enter)
+          Frame__CallEventBinding(*ret, #Event_enter, #Null)
         EndIf
         
         *self\LastMouseFrame = *ret
@@ -1325,24 +1626,24 @@ Module GUI
       ;Left Mouse button
       If (MouseButton & sdl::#BUTTON_LMASK) And Not (*self\MouseButton & sdl::#BUTTON_LMASK)
         If *ret And Not Frame__IsInheritedState(*ret,#state_disabled)            
-          Frame__CallEventCallback( *ret, #Event_LeftDown )
+          Frame__CallEventBinding( *ret, #Event_LeftDown, #Null )
           *self\MouseClickFrame = *ret
         EndIf  
         
       ElseIf Not (MouseButton & sdl::#BUTTON_LMASK) And (*self\MouseButton & sdl::#BUTTON_LMASK)
         If *ret And Not Frame__IsInheritedState(*ret,#state_disabled)
           If *ret = *self\MouseClickFrame 
-            If MouseClicks & sdl::#BUTTON_LMASK
-              Frame__CallEventCallback( *ret, #Event_LeftDoubleClick )
+            If MouseClicks & sdl::#BUTTON_LMASK And *ret\on[#Event_LeftDoubleClick]
+              Frame__CallEventBinding( *ret, #Event_LeftDoubleClick, #Null )
             Else 
-              Frame__CallEventCallback( *ret, #Event_LeftClick )
+              Frame__CallEventBinding( *ret, #Event_LeftClick, #Null )
             EndIf              
           EndIf
         
-          Frame__CallEventCallback( *ret, #Event_LeftUp )          
+          Frame__CallEventBinding( *ret, #Event_LeftUp, #Null )          
         EndIf
         If *self\MouseClickFrame And *ret <> *self\MouseClickFrame
-          Frame__CallEventCallback( *self\MouseClickFrame, #Event_LeftUp )
+          Frame__CallEventBinding( *self\MouseClickFrame, #Event_LeftUp, #Null )
         EndIf
         *self\MouseClickFrame = #Null
       EndIf
@@ -1350,24 +1651,24 @@ Module GUI
       ;Right Mouse Button
       If (MouseButton & sdl::#BUTTON_RMASK) And Not (*self\MouseButton & sdl::#BUTTON_RMASK)
         If *ret And Not Frame__IsInheritedState(*ret,#state_disabled)            
-          Frame__CallEventCallback( *ret, #Event_RightDown )
+          Frame__CallEventBinding( *ret, #Event_RightDown, #Null )
           *self\MouseClickFrame = *ret
         EndIf  
         
       ElseIf Not (MouseButton & sdl::#BUTTON_RMASK) And (*self\MouseButton & sdl::#BUTTON_RMASK)
         If *ret And Not Frame__IsInheritedState(*ret,#state_disabled)
           If *ret = *self\MouseClickFrame 
-            If MouseClicks & sdl::#BUTTON_RMASK
-              Frame__CallEventCallback( *ret, #Event_RightDoubleClick )
+            If MouseClicks & sdl::#BUTTON_RMASK And *ret\on[#Event_RightDoubleClick]
+              Frame__CallEventBinding( *ret, #Event_RightDoubleClick, #Null )
             Else 
-              Frame__CallEventCallback( *ret, #Event_RightClick )
+              Frame__CallEventBinding( *ret, #Event_RightClick, #Null )
             EndIf              
           EndIf
         
-          Frame__CallEventCallback( *ret, #Event_RightUp )
+          Frame__CallEventBinding( *ret, #Event_RightUp, #Null )
         EndIf
         If *self\MouseClickFrame And *ret <> *self\MouseClickFrame
-          Frame__CallEventCallback( *self\MouseClickFrame, #Event_LeftUp )
+          Frame__CallEventBinding( *self\MouseClickFrame, #Event_LeftUp, #Null )
         EndIf
         *self\MouseClickFrame = #Null
       EndIf
@@ -1453,7 +1754,7 @@ Module GUI
             *self\difPoint\y + dy
           EndIf
           
-          Frame__CallEventCallback(*self\movingFrame, #Event_Moving)
+          Frame__CallEventBinding(*self\movingFrame, #Event_Moving, #Null)
           
           ;handling sizing
         ElseIf *self\sizingFrame
@@ -1519,7 +1820,7 @@ Module GUI
             EndIf
           EndIf
           
-          Frame__CallEventCallback(*self\sizingFrame, #Event_Sizing)
+          Frame__CallEventBinding(*self\sizingFrame, #Event_Sizing, #Null)
           
         EndIf
         
@@ -1546,9 +1847,512 @@ Module GUI
     ProcedureReturn Frame__FindFrame(*self\baseElement\child,name.s)
   EndProcedure
   
+  class::Method Procedure.l Class_LoadNamedFont(*self.mClass, Name.s, File.s, size.l)
+    If *self\Fonts(name)
+      sdl::TTF_CloseFont( *self\Fonts() )
+    EndIf
+    *self\Fonts(name) = sdl::TTF_OpenFont(file, size)
+    ProcedureReturn Bool(*self\Fonts(name))
+  EndProcedure
+  
+  class::Method Procedure Class_GetNamedFont(*self.mClass, Name.s)
+    ProcedureReturn *self\Fonts(name)
+  EndProcedure
+  
+  class::Method Procedure.l Class_LoadNamedTexture(*self.mClass, Name.s, File.s)
+    If *self\Textures(name)
+      SDL::DestroyTexture( *self\Textures() )
+    EndIf
+    *self\Textures(name) = *self\render\LoadTexture(file)
+    ProcedureReturn Bool(*self\Textures())
+  EndProcedure
+  
+  class::Method Procedure Class_GetNamedTexture(*self.mClass, Name.s)
+    ProcedureReturn *self\Textures(name)
+  EndProcedure
+  
+  Procedure Class__XML_NewFont(*self.mClass, *node, path.s)
+    Protected *subNode
+    Protected.s file, name
+    Protected.l size = 10
+    
+    name = GetXMLAttribute(*node, "Name")
+    file = GetXMLAttribute(*node, "File")
+    size = Val(GetXMLAttribute(*node, "Size"))
+    
+    If name<>"" And file<>"" And size>0
+      Class_LoadNamedFont(*self, name, path + file, size)
+    EndIf    
+  EndProcedure
+  
+  Procedure Class__XML_NewTexture(*self.mClass, *node, path.s)
+    Protected *subNode
+    Protected.s file, name
+    
+    name = GetXMLAttribute(*node, "Name")
+    file = GetXMLAttribute(*node, "File")
+    
+    If name<>"" And file<>""
+      Class_LoadNamedTexture(*self, path + name, file)
+    EndIf    
+  EndProcedure
+  
+  
+  Enumeration
+    #isString
+    #isInteger
+    #isFloat
+  EndEnumeration
+  
+  Procedure.l TestType(*pos.character)
+    Protected.l hasSignum, isHex, hasPoint, hasExp
+    Protected.l ret = #isInteger
+    While *pos\c > 0
+      Select *pos\c
+        Case '#'
+          If hasSignum Or isHex Or hasPoint
+            ret = #isString
+            Break
+          EndIf
+          hasSignum = #True
+          hasPoint = #True
+          isHex = #True
+          
+        Case '+','-'
+          If hasSignum
+            ret = #isString
+            Break
+          EndIf
+          
+        Case '$'
+          If isHex Or hasPoint
+            ret = #isString
+            Break
+          EndIf
+          hasSignum = #True
+          hasPoint = #True
+          isHex = #True
+          
+        Case '0' To '9'
+          hasSignum = #True
+          ; ok
+          
+        Case 'e','E'
+          If Not isHex
+            If hasExp
+              ret = #isString
+              Break
+            EndIf
+            hasSignum = #False
+            hasPoint = #True
+            ret = #isFloat
+          EndIf
+                    
+        Case 'a' To 'f', 'A' To 'F'
+          If Not isHex
+            ret = #isString
+            Break
+          EndIf
+          
+        Case '.'
+          If hasPoint Or isHex 
+            ret = #isString
+            Break
+          EndIf
+          ret = #isFloat
+          hasPoint = #True
+          hasSignum = #True
+          
+        Default
+          ret = #isString
+          Break
+                    
+      EndSelect
+      *pos + SizeOf(character)
+    Wend
+    ProcedureReturn ret
+  EndProcedure
+  
+  Procedure ValUD(str.s)
+    If Asc(str)='#'
+      ProcedureReturn RGBA( Val("$"+Mid(str,2,2)), Val("$"+Mid(str,4,2)), Val("$"+Mid(str,6,2)), Val("$"+Mid(str,8,2)+"FF") )
+    EndIf
+    ProcedureReturn Val(str)
+  EndProcedure
+  
+  Procedure ParseAnchorString(*frame.mFrame, which.l, str.s)
+    Protected.l offset, anchor, pos
+    Protected.s AnchorFrame, value
+    Protected.mFrame *anchorFrame
+    str = Trim(str)
+    
+    value = StringField(str,1," ")
+    Select value
+      Case "TextureSize", "+TextureSize" : offset = #Offset_TextureSize
+      Case "FrameSize", "+FrameSize" : offset = #Offset_FrameSize
+      Case "-TextureSize" : offset = -#Offset_TextureSize
+      Case "-FrameSize" : offset = -#Offset_FrameSize
+      Default 
+        pos = FindString( value, "/")
+        If pos
+          offset = Val( Left(value,pos-1) ) / Val( Mid(value,pos+1))
+        Else       
+          offset = Val( value )
+        EndIf
+    EndSelect
+    
+    Select StringField(str,2," ")
+      Case "Left": anchor = #Anchor_Left        
+      Case "Right": anchor = #Anchor_Right
+      Case "Top": anchor = #Anchor_Top
+      Case "Bottom": anchor = #Anchor_Bottom
+      Case "Center" : anchor = #Anchor_Center
+      Case "Direct" : anchor = #Anchor_Direct
+      Case "MaxSize" : anchor = #Anchor_MaxSize
+      Case "Size" : anchor = #Anchor_Size
+      Case "SizeWidth" : anchor = #Anchor_SizeWidth
+      Case "SizeHeight" : anchor = #Anchor_SizeHeight        
+      Default : anchor = #Anchor_None
+    EndSelect
+    
+    AnchorFrame = StringField(str,3," ")
+    If AnchorFrame
+      *anchorFrame = Frame_GetFrame(*frame,AnchorFrame)
+    EndIf
+    
+    Frame__SetAnchor(*frame, which, offset, anchor, *anchorFrame )
+  EndProcedure
+  
+  Procedure.f ValTexture(value.s)
+    Protected.l pos
+    pos = FindString( value, "/")
+    If pos
+      ProcedureReturn ValF( Left(value,pos-1) ) / ValF( Mid(value,pos+1))
+    EndIf
+    ProcedureReturn ValF( value )
+  EndProcedure
+        
+  
+  Procedure Class__XML_NewFrame(*self.mClass, *node, isTemplate, *frame.mframe)
+    Protected *child, *subChild
+    Protected.s name, value
+    Protected *anchorNode, *bindNode, *func
+    Protected.l i, style, mod
+   
+    value = GetXMLAttribute(*node, "State")
+    i=1
+    Repeat
+      Select StringField(value, i, " ")
+        Case "" : Break
+        Case "Background" : *frame\state | #State_OnBack
+        Case "Top" : *frame\state | #State_OnTop
+        Case "Disabled" : *frame\state | #State_Disabled
+        Case "Hidden" : *frame\state | #State_Hide
+        Case "ClipOutside" : *frame\state | #State_ClipOutside
+      EndSelect
+      i+1
+    ForEver
+    
+    *child = ChildXMLNode(*node)
+    While *child
+      If XMLNodeType(*child) = #PB_XML_Normal
+      
+        Select GetXMLNodeName(*child)
+          Case "Bound"
+            value = GetXMLAttribute(*child, "MinWidth")
+            If value<>""
+              *frame\MinWidth = Val(value)
+            EndIf
+            
+            value = GetXMLAttribute(*child, "MinHeight")
+            If value<>""
+              *frame\MinHeight = Val(value)
+            EndIf
+            
+            value = GetXMLAttribute(*child, "MaxWidth")
+            If value<>""
+              *frame\MaxWidth = Val(value)
+            EndIf
+            
+            value = GetXMLAttribute(*child, "MaxHeight")
+            If value<>""
+              *frame\MaxHeight = Val(value)
+            EndIf
+            
+          Case "TextureText"
+            Frame_SetText(*frame, 
+                          *self\Fonts( GetXMLAttribute(*child, "Font") ), 
+                          GetXMLNodeText(*child), 
+                          ValUD(  GetXMLAttribute(*child, "Color") ), 
+                          #tex_single)
+            
+          Case "Texture"
+            value = GetXMLAttribute(*child, "Style")            
+            i=1 : style = #tex_single : mod = 0
+            Repeat
+              Select StringField(value, i, " ")
+                Case "" : Break
+                Case "Tile" : Style = #tex_tile
+                Case "Single" : Style = #tex_single
+                Case "Stretch" : Style = #tex_stretch
+                Case "Top":  mod | #tex_AnchorTop
+                Case "Bottom" : mod | #tex_AnchorBottom
+                Case "Left" : mod | #tex_AnchorLeft
+                Case "Right" : mod | #tex_AnchorRight
+              EndSelect
+              i+1
+            ForEver
+                        
+            Frame_SetNamedTexture( *frame,
+                                   GetXMLNodeText(*child),
+                                   ValTexture( GetXMLAttribute(*child, "x1") ),
+                                   ValTexture( GetXMLAttribute(*child, "y1") ),
+                                   ValTexture( GetXMLAttribute(*child, "x2") ),
+                                   ValTexture( GetXMLAttribute(*child, "y2") ),
+                                   style | mod)            
+            
+          Case "Anchor"
+            *anchorNode = *child
+            
+          Case "UserData"
+            *subChild = ChildXMLNode(*child)
+            
+            While *subChild
+              If XMLNodeType(*subChild) = #PB_XML_Normal
+                name = GetXMLNodeName(*subChild)
+                value = Trim(GetXMLNodeText(*subChild))
+                If name <> "" And value <> ""
+                  Select TestType(@value)
+                    Case #isString
+                      Frame_SetUserDataS(*frame, name, value, #True)
+                    Case #isInteger
+                      Frame_SetUserData(*frame, name, ValUD(value), #True)
+                    Case #isFloat
+                      Frame_SetUserDataF(*frame, name, ValF(value), #True)
+                  EndSelect
+                EndIf                          
+                
+              EndIf
+              *subChild = NextXMLNode(*subChild)
+            Wend
+            
+            
+          Case "Frame"
+            Class__XML_NewFrame( *self, *child, isTemplate, Frame__NewChild( *frame,
+                                                                             GetXMLAttribute(*child, "Name"), 
+                                                                             #Null, 
+                                                                             GetXMLAttribute(*child, "Template"),
+                                                                             #False) )
+            
+          Case "Bind"
+            *bindNode = *child
+            
+          Default
+            Debug "XML-Frame-Element:" + GetXMLNodeName(*child)
+            
+        EndSelect
+        
+      EndIf
+      *child = NextXMLNode(*child)      
+    Wend
+    
+    If *anchorNode
+      *subChild = XMLNodeFromPath(*anchorNode, "Left")
+      If *subChild = #Null
+        *subChild = XMLNodeFromPath(*anchorNode, "X")
+      EndIf
+      If *subChild
+        ParseAnchorString( *frame, #Anchor_Left, GetXMLNodeText(*subChild) )
+      EndIf
+      
+      *subChild = XMLNodeFromPath(*anchorNode, "Right")
+      If *subChild = #Null
+        *subChild = XMLNodeFromPath(*anchorNode, "W")
+      EndIf
+      If *subChild
+        ParseAnchorString( *frame, #Anchor_Right, GetXMLNodeText(*subChild) )
+      EndIf
+      
+      *subChild = XMLNodeFromPath(*anchorNode, "Top")
+      If *subChild = #Null
+        *subChild = XMLNodeFromPath(*anchorNode, "Y")
+      EndIf
+      If *subChild
+        ParseAnchorString( *frame, #Anchor_Top, GetXMLNodeText(*subChild) )
+      EndIf
+      
+      *subChild = XMLNodeFromPath(*anchorNode, "Bottom")
+      If *subChild = #Null
+        *subChild = XMLNodeFromPath(*anchorNode, "H")
+      EndIf
+      If *subChild
+        ParseAnchorString( *frame, #Anchor_Bottom, GetXMLNodeText(*subChild) )
+      EndIf
+    EndIf
+    
+    Macro BindHelp(_event_)
+      *subChild = XMLNodeFromPath(*bindNode, _dquote#_event_#_dquote)
+      
+      If *subChild
+        CompilerIf #PB_Compiler_Debugger
+          If GetRuntimeInteger( GetXMLNodeText(*subChild) ) = 0
+            Debug "Bind-Error:"+ Frame_GetName(*frame)+" "+ _dquote#_event_#_dquote +" "+ GetXMLNodeText(*subChild) 
+          EndIf 
+        CompilerEndIf
+        Frame_BindEvent(*frame, #Event_#_event_, GetRuntimeInteger( GetXMLNodeText(*subChild) ) )
+      EndIf
+    EndMacro
+    
+    If *bindNode
+      BindHelp(Enter)
+      BindHelp(Leave)
+      BindHelp(LeftClick)
+      BindHelp(LeftDoubleClick)
+      BindHelp(LeftDown)
+      BindHelp(LeftUp)
+      BindHelp(RightClick)
+      BindHelp(RightDoubleClick)
+      BindHelp(RightDown)
+      BindHelp(RightUp)         
+      BindHelp(Sizing)
+      BindHelp(Moving)
+      BindHelp(StateChange)
+      BindHelp(Delete)
+      BindHelp(UserData)
+      BindHelp(Load)
+      BindHelp(UserAction)
+      CompilerIf #Event_UserAction +1 <> #Event_MaxEvent
+        CompilerError "MISSING EVENTS!"
+      CompilerEndIf
+      
+;       If Not isTemplate
+;         Frame__CallEventBinding(*frame, #Event_Load, #Null)
+;       EndIf
+      
+    EndIf
+    
+    UndefineMacro BindHelp
+    
+  EndProcedure
+  
+  class::Method Procedure Class_LoadXML(*self.mClass, file.s)
+    Protected xml 
+    Protected.s path = GetPathPart(file)
+    xml = LoadXML(#PB_Any, file)
+    If xml = 0
+      ProcedureReturn #False
+    EndIf
+    
+    If XMLStatus(xml) <> #PB_XML_Success
+      Debug XMLError(xml)+" - line:"+ XMLErrorLine(xml) + "- pos:" + XMLErrorPosition(xml) + "- status:" +XMLStatus(xml)
+      FreeXML(xml)
+      ProcedureReturn #False
+    EndIf
+    
+    Protected *node= MainXMLNode(xml)
+    If Not *node Or Not GetXMLNodeName(*node)="Gui"
+      FreeXML(xml)
+      ProcedureReturn #False
+    EndIf
+    
+    Protected.s name
+    Protected.mframe *frame
+    
+    *node = ChildXMLNode(*node)
+    While *node
+      
+      Select GetXMLNodeName(*node)
+        Case "Font"
+          Class__XML_NewFont(*self, *node, path)
+          
+        Case "Texture"
+          Class__XML_NewTexture(*self, *node, path)          
+          
+        Case "Template"
+          ;Debug "NEW TEMPLATE " + GetXMLAttribute(*node, "Name")
+          *frame = Frame__NewChild( *self\templateElement, 
+                                    GetXMLAttribute(*node, "Name"), 
+                                    #State_Template, 
+                                    GetXMLAttribute(*node, "Template"),
+                                    #False)          
+          Class__XML_NewFrame(*self, *node, #True, *frame )
+          
+        Case "Frame"
+          *frame = Frame__NewChild( *self\baseElement, 
+                                    GetXMLAttribute(*node, "Name"), 
+                                    #State_None, 
+                                    GetXMLAttribute(*node, "Template"),
+                                    #False)
+          
+          Class__XML_NewFrame(*self, *node, #False, *frame )
+          
+          Frame__CopyCallBinding(*frame, #Null)
+          
+          
+      EndSelect      
+      
+      *node = NextXMLNode(*node)
+    Wend
+      
+    FreeXML(xml)
+    ProcedureReturn #True
+  EndProcedure
+  
+  
+  Class::Method Procedure   Class_SetUserData(*self.mClass,frame.s, name.s,value,silent=#False)
+    Protected.frame *frame = Class_GetFrame(*self, frame)
+    If *frame
+      ProcedureReturn frame_SetUserData(*frame, name, value, silent)
+    EndIf
+  EndProcedure
+  Class::Method Procedure   Class_GetUserData(*self.mClass,frame.s, name.s)
+    Protected.frame *frame = Class_GetFrame(*self, frame)
+    If *frame
+      ProcedureReturn frame_GetUserData(*frame, name)
+    EndIf
+  EndProcedure
+  Class::Method Procedure   Class_SetUserDataF(*self.mClass,frame.s, name.s,value.f,silent=#False)
+    Protected.frame *frame = Class_GetFrame(*self, frame)
+    If *frame
+      ProcedureReturn frame_SetUserDataF(*frame, name, value, silent)
+    EndIf
+  EndProcedure
+  Class::Method Procedure.f Class_GetUserDataF(*self.mClass,frame.s, name.s)
+    Protected.frame *frame = Class_GetFrame(*self, frame)
+    If *frame
+      ProcedureReturn frame_GetUserDataF(*frame, name)
+    EndIf
+  EndProcedure
+  Class::Method Procedure   Class_SetUserDataS(*self.mClass,frame.s, name.s,value.s,silent=#False)
+    Protected.frame *frame = Class_GetFrame(*self, frame)
+    If *frame
+      ProcedureReturn frame_SetUserDataS(*frame, name, value, silent)
+    EndIf
+  EndProcedure
+  Class::Method Procedure.s Class_GetUserDataS(*self.mClass,frame.s, name.s)
+    Protected.frame *frame = Class_GetFrame(*self, frame)
+    If *frame
+      ProcedureReturn Frame_GetUserDataS(*frame, name)
+    EndIf
+  EndProcedure    
+  Class::Method Procedure   Class_SetState(*self.mClass,frame.s, state.l, flag.l)
+    Protected.frame *frame = Class_GetFrame(*self, frame)
+    If *frame
+      ProcedureReturn Frame_SetState(*frame, state, flag)
+    EndIf
+  EndProcedure
+  Class::Method Procedure.l Class_GetState(*self.mClass,frame.s, state.l)
+    Protected.frame *frame = Class_GetFrame(*self, frame)
+    If *frame
+      ProcedureReturn Frame_GetState(*frame, state)
+    EndIf
+  EndProcedure
+  
+    
+  
 EndModule
 ; IDE Options = PureBasic 5.72 (Windows - x64)
-; CursorPosition = 1546
-; FirstLine = 1509
-; Folding = ------------
+; CursorPosition = 2223
+; FirstLine = 2197
+; Folding = -----------------
 ; EnableXP

@@ -290,7 +290,7 @@ Module renderer
       While *cur
         *thisCur=*cur
         *cur = *cur\nextTextureObj
-        Debug "FOUND UNDELETED TEXTURE OBJECT!"
+        Debug "FOUND UNDELETED TEXTURE OBJECT! " +Hex(*thisCur)
         Object::Delete(*thisCur)
       Wend      
     CompilerEndIf
@@ -627,6 +627,7 @@ Module renderer
         sdl::FreeSurface(*surface)
       EndIf
       SDL::SetHint( SDL::#HINT_RENDER_SCALE_QUALITY, old )
+      
       ProcedureReturn *tex
     EndProcedure
     class::Method Procedure.i Class_RenderTextShaded(*self.mClass, *sdl_font, Text.s, *fg_sdl_color, *bg_sdl_color, ScaleQuality.l=1)
@@ -867,7 +868,7 @@ EndModule
 
 
 ; IDE Options = PureBasic 5.72 (Windows - x64)
-; CursorPosition = 172
-; FirstLine = 142
+; CursorPosition = 135
+; FirstLine = 132
 ; Folding = -------------
 ; EnableXP

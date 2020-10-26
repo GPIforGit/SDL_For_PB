@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Gui>
+	<Font Name="Default" File="Early GameBoy.ttf" Size="8" />
+	<Texture Name="Button" File="Button.png" />
+	<Texture Name="SliderHorizontal" File="SliderHorizontal.png" />
+	<Texture Name="SliderVertical" File="SliderVertical.png" />
+	<Texture Name="Frame" File="Frame.png" />
+	<Texture Name="Checkbox" File="Checkbox.png" />
+	
+	<Template Name="Button">
+		<Anchor>
+			<Left> 0 </Left>
+			<Top> 0 </Top>	
+			<Right> 8 Size .Text </Right>
+			<Bottom> 16 </Bottom>	
+		</Anchor>
+		<Frame Name="dLeft" State="Background">
+			<Anchor>
+				<Left>0</Left>
+				<Top>0</Top>
+				<Right>TextureSize</Right>
+				<Bottom>0 Bottom ..</Bottom>
+			</Anchor>
+		</Frame>
+		<Frame Name="dRight" State="Background">
+			<Anchor>
+				<Left>-TextureSize Right ..</Left>
+				<Top>0</Top>
+				<Right>TextureSize</Right>
+				<Bottom>0 Bottom ..</Bottom>
+			</Anchor>
+		</Frame>
+		<Frame Name="dMid" State="Background">
+			<Anchor>
+				<Left>0 Right ..dLeft</Left>
+				<Top>0 Top ..dLeft</Top>
+				<Right>0 Left ..dRight</Right>
+				<Bottom>0 Bottom ..dRight</Bottom>
+			</Anchor>
+		</Frame>
+		<Frame Name="Text">
+			<Anchor>
+				<Left>0 Center ..</Left>
+				<Top>0 Center ..</Top>
+				<Right>TextureSize</Right>
+				<Bottom>TextureSize</Bottom>		
+			</Anchor>
+		</Frame>
+		<UserData>
+			<Text>Test</Text>
+			<Texture>Button</Texture>
+			<OffsetPushedText>1</OffsetPushedText>
+			<TextColor>#FFFFFF</TextColor>
+			<TextColorDisabled>#000000</TextColorDisabled>
+			<TextColorHighlight>#ff7f7f</TextColorHighlight>
+			<Font>Default</Font>
+		</UserData>
+		<Bind>
+			<LeftDown>Gadget::Gadget_Pushed()</LeftDown>
+			<LeftUp>Gadget::Gadget_DePushed()</LeftUp>
+			<Enter>Gadget::Gadget_Highlight()</Enter>
+			<Leave>Gadget::Gadget_DeHighlight()</Leave>
+			<LeftClick>Gadget::Gadget_Click()</LeftClick>
+			
+			<StateChange>Gadget::Button_State()</StateChange>		
+			<UserData>Gadget::Button_UserData()</UserData>
+			<Delete>Gadget::Button_Delete()</Delete>
+			<Load>Gadget::Button_Load()</Load>			
+		</Bind>	
+	</Template>
+	<Template Name="SliderHorizontal">
+		<Anchor>
+			<Left> 0 </Left>
+			<Top> 0 </Top>	
+			<Right> 116 </Right>
+			<Bottom> 16 </Bottom>	
+		</Anchor>
+		<Frame Name="dLeft" State="Background">
+			<Anchor>
+				<Left>0</Left>
+				<Top>0</Top>
+				<Right>0 SizeHeight ..</Right>
+				<Bottom>0 SizeHeight ..</Bottom>
+			</Anchor>
+		</Frame>
+		<Frame Name="dRight" State="Background">
+			<Anchor>
+				<Left>-FrameSize Right ..</Left>
+				<Top>0</Top>
+				<Right>0 SizeHeight ..</Right>
+				<Bottom>0 SizeHeight ..</Bottom>
+			</Anchor>
+		</Frame>
+		<Frame Name="dMid" State="Background">
+			<Anchor>
+				<Left>0 Right ..dLeft</Left>
+				<Top>0 Top ..dLeft</Top>
+				<Right>0 Left ..dRight</Right>
+				<Bottom>0 Bottom ..dRight</Bottom>
+			</Anchor>
+		</Frame>
+		<Frame Name="Slider">
+			<Anchor>
+				<Left>0</Left>
+				<Top>0</Top>
+				<Right>0 SizeHeight ..</Right>
+				<Bottom>0 SizeHeight ..</Bottom>
+			</Anchor>
+			<Bind>
+				<LeftDown>Gadget::Slider_LeftDown()</LeftDown>
+				<LeftUp>Gadget::Slider_LeftUp()</LeftUp>
+				<Enter>Gadget::GadgetParent_Highlight()</Enter>
+				<Leave>Gadget::GadgetParent_DeHighlight()</Leave>
+				<Moving>Gadget::Slider_Moving()</Moving>
+			</Bind>
+		</Frame>
+		<UserData>
+			<Texture>SliderHorizontal</Texture>
+			<Flipped> 0 </Flipped>
+			<Vertical> 0 </Vertical>
+			<Value> 0.25 </Value>
+		</UserData>
+		<Bind>
+			<Load>Gadget::Slider_Load()</Load>
+			<StateChange>Gadget::Slider_State()</StateChange>
+			<UserData>Gadget::Slider_UserData()</UserData>
+			<LeftDown>Gadget::Slider_Click()</LeftDown>
+		</Bind>
+	</Template>
+	
+	<Template Name="SliderVertical">
+		<Anchor>
+			<Left> 0 </Left>
+			<Top> 0 </Top>	
+			<Right> 16 </Right>
+			<Bottom> 116 </Bottom>	
+		</Anchor>
+		<Frame Name="dLeft" State="Background">
+			<Anchor>
+				<Left>0</Left>
+				<Top>0</Top>
+				<Right>0 SizeWidth ..</Right>
+				<Bottom>0 SizeWidth ..</Bottom>
+			</Anchor>
+		</Frame>
+		<Frame Name="dRight" State="Background">
+			<Anchor>
+				<Left>0</Left>
+				<Top>-FrameSize Bottom ..</Top>
+				<Right>0 SizeWidth ..</Right>
+				<Bottom>0 SizeWidth ..</Bottom>
+			</Anchor>
+		</Frame>
+		<Frame Name="dMid" State="Background">
+			<Anchor>
+				<Left>0 Left ..dLeft</Left>
+				<Top>0 Bottom ..dLeft</Top>
+				<Right>0 Right ..dRight</Right>
+				<Bottom>0 Top ..dRight</Bottom>
+			</Anchor>
+		</Frame>
+		<Frame Name="Slider">
+			<Anchor>
+				<Left>0</Left>
+				<Top>0</Top>
+				<Right>0 SizeWidth ..</Right>
+				<Bottom>0 SizeWidth ..</Bottom>
+			</Anchor>
+			<Bind>
+				<LeftDown>Gadget::Slider_LeftDown()</LeftDown>
+				<LeftUp>Gadget::Slider_LeftUp()</LeftUp>
+				<Enter>Gadget::GadgetParent_Highlight()</Enter>
+				<Leave>Gadget::GadgetParent_DeHighlight()</Leave>
+				<Moving>Gadget::Slider_Moving()</Moving>
+			</Bind>
+		</Frame>
+		<UserData>
+			<Texture>SliderVertical</Texture>
+			<Flipped> 0 </Flipped>
+			<Vertical> 1 </Vertical>
+			<Value> 0.0 </Value>
+		</UserData>
+		<Bind>
+			<Load>Gadget::Slider_Load()</Load>
+			<StateChange>Gadget::Slider_State()</StateChange>
+			<UserData>Gadget::Slider_UserData()</UserData>
+			<LeftDown>Gadget::Slider_Click()</LeftDown>
+		</Bind>
+	</Template>
+	
+	<Template Name="OutsideFrame">
+		<Anchor>
+			<Left>0</Left>
+			<Top>0</Top>
+			<Right>10</Right>
+			<Bottom>10</Bottom>
+		</Anchor>
+		
+		<Frame Name="dTop" State="Background ClipOutside">
+			<Texture x1="1/3" y1="0/3" x2="2/3" y2="1/3" Style="Tile Top">Frame</Texture>
+			<Anchor>
+				<Left>0 Left ..</Left>
+				<Top>-3 Top ..</Top>
+				<Right>0 Right ..</Right>
+				<Bottom>3</Bottom>
+			</Anchor>
+			<Bind>
+				<LeftDown>Gadget::WindowSize_LeftDown()</LeftDown>
+				<LeftUp>Gadget::WindowStop_LeftUp()</LeftUp>
+			</Bind>
+		</Frame>
+		<Frame Name="dBottom" State="Background ClipOutside">
+			<Texture x1="1/3" y1="2/3" x2="2/3" y2="3/3" Style="Tile Bottom">Frame</Texture>
+			<Anchor>
+				<Left>0 Left ..</Left>
+				<Top>0 Bottom ..</Top>
+				<Right>0 Right ..</Right>
+				<Bottom>3</Bottom>
+			</Anchor>
+			<Bind>
+				<LeftDown>Gadget::WindowSize_LeftDown()</LeftDown>
+				<LeftUp>Gadget::WindowStop_LeftUp()</LeftUp>
+			</Bind>
+		</Frame>
+		<Frame Name="dLeft" State="Background ClipOutside">
+			<Texture x1="0/3" y1="1/3" x2="1/3" y2="2/3" Style="Tile Left">Frame</Texture>
+			<Anchor>
+				<Left>-3 Left ..</Left>
+				<Top>0 Top ..</Top>
+				<Right>3</Right>
+				<Bottom>0 Bottom ..</Bottom>
+			</Anchor>
+			<Bind>
+				<LeftDown>Gadget::WindowSize_LeftDown()</LeftDown>
+				<LeftUp>Gadget::WindowStop_LeftUp()</LeftUp>
+			</Bind>
+		</Frame>
+		<Frame Name="dRight" State="Background ClipOutside">
+			<Texture x1="2/3" y1="1/3" x2="3/3" y2="2/3" Style="Tile Right">Frame</Texture>
+			<Anchor>
+				<Left>0 Right ..</Left>
+				<Top>0 Top ..</Top>
+				<Right>3</Right>
+				<Bottom>0 Bottom ..</Bottom>
+			</Anchor>
+			<Bind>
+				<LeftDown>Gadget::WindowSize_LeftDown()</LeftDown>
+				<LeftUp>Gadget::WindowStop_LeftUp()</LeftUp>
+			</Bind>
+		</Frame>
+		<Frame Name="dMid" State="Background ClipOutside">
+			<Texture x1="1/3" y1="1/3" x2="2/3" y2="2/3" Style="Tile">Frame</Texture>
+			<Anchor>
+				<Left>0 Right ..dLeft</Left>
+				<Top>0 Bottom ..dTop</Top>
+				<Right>0 Left ..dRight</Right>
+				<Bottom>0 Top ..dBottom</Bottom>
+			</Anchor>	
+			<Bind>
+				<LeftDown>Gadget::WindowMove_LeftDown()</LeftDown>
+				<LeftUp>Gadget::WindowStop_LeftUp()</LeftUp>
+			</Bind>			
+		</Frame>
+		<Frame Name="dLeftTop"  State="Background ClipOutside">
+			<Texture x1="0/3" y1="0/3" x2="1/3" y2="1/3" Style="Tile Top Left">Frame</Texture>
+			<Anchor>
+				<Left>0 Left ..dLeft</Left>
+				<Top>0 Top ..dTop</Top>
+				<Right>3</Right>
+				<Bottom>3</Bottom>
+			</Anchor>
+			<Bind>
+				<LeftDown>Gadget::WindowSize_LeftDown()</LeftDown>
+				<LeftUp>Gadget::WindowStop_LeftUp()</LeftUp>
+			</Bind>
+		</Frame>
+		<Frame Name="dRightTop"  State="Background ClipOutside">
+			<Texture x1="2/3" y1="0/3" x2="3/3" y2="1/3" Style="Tile Top Right">Frame</Texture>
+			<Anchor>
+				<Left>-FrameSize Right ..dRight</Left>
+				<Top>0 Top ..dTop</Top>
+				<Right>3</Right>
+				<Bottom>3</Bottom>
+			</Anchor>
+			<Bind>
+				<LeftDown>Gadget::WindowSize_LeftDown()</LeftDown>
+				<LeftUp>Gadget::WindowStop_LeftUp()</LeftUp>
+			</Bind>
+		</Frame>
+		<Frame Name="dLeftBottom"  State="Background ClipOutside">
+			<Texture x1="0/3" y1="2/3" x2="1/3" y2="3/3" Style="Tile Bottom Left">Frame</Texture>
+			<Anchor>
+				<Left>0 Left ..dLeft</Left>
+				<Top>-FrameSize Bottom ..dBottom</Top>
+				<Right>3</Right>
+				<Bottom>3</Bottom>
+			</Anchor>
+			<Bind>
+				<LeftDown>Gadget::WindowSize_LeftDown()</LeftDown>
+				<LeftUp>Gadget::WindowStop_LeftUp()</LeftUp>
+			</Bind>
+		</Frame>
+		<Frame Name="dRightBottom"  State="Background ClipOutside">
+			<Texture x1="2/3" y1="2/3" x2="3/3" y2="3/3" Style="Tile Bottom Right">Frame</Texture>
+			<Anchor>
+				<Left>-FrameSize Right ..dRight</Left>
+				<Top>-FrameSize Bottom ..dBottom</Top>
+				<Right>3</Right>
+				<Bottom>3</Bottom>
+			</Anchor>
+			<Bind>
+				<LeftDown>Gadget::WindowSize_LeftDown()</LeftDown>
+				<LeftUp>Gadget::WindowStop_LeftUp()</LeftUp>
+			</Bind>
+		</Frame>
+		
+		<UserData>
+			<Sizeable> 0 </Sizeable>
+			<Moveable> 0 </Moveable>
+		</UserData>
+		
+	</Template>
+	
+	
+	<Template Name="Checkbox">
+		<Anchor>
+			<X>0</X>
+			<Y>0</Y>
+			<W>16 Size .Text</W>
+			<H>16</H>
+		</Anchor>
+		<Frame Name="Box">
+			<Anchor>
+				<X>0</X>
+				<Y>0</Y>
+				<W>0 SizeHeight ..</W>
+				<H>0 SizeHeight ..</H>
+			</Anchor>
+		</Frame>
+		<Frame Name="Text">
+			<Anchor>
+				<X>0 Right ..Box</X>
+				<Y>0 Center ..</Y>
+				<Right>TextureSize</Right>
+				<Bottom>TextureSize</Bottom>
+			</Anchor>
+		</Frame>
+		<UserData>
+			<Texture>Checkbox</Texture>
+			<Text>Some</Text>
+			<Value>0</Value>
+			<TextColor>#FFFFFF</TextColor>
+			<TextColorDisabled>#000000</TextColorDisabled>
+			<TextColorHighlight>#ff7f7f</TextColorHighlight>
+			<Font>Default</Font>
+		</UserData>
+		<Bind>
+			<LeftDown>Gadget::Gadget_Pushed()</LeftDown>
+			<LeftUp>Gadget::Gadget_DePushed()</LeftUp>
+			<Enter>Gadget::Gadget_Highlight()</Enter>
+			<Leave>Gadget::Gadget_DeHighlight()</Leave>
+			
+			<StateChange>Gadget::Checkbox_State()</StateChange>		
+			<UserData>Gadget::Checkbox_UserData()</UserData>
+			<LeftClick>Gadget::Checkbox_Click()</LeftClick>
+			<Load>Gadget::Checkbox_Load()</Load>
+			<Delete>Gadget::Checkbox_Delete()</Delete>
+			
+		</Bind>
+	</Template>
+	
+</Gui>
+
+
+
+
+
+
+

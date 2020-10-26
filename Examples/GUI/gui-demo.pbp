@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.72 (Windows - x64)">
+  <section name="config">
+    <options closefiles="1" openmode="0" name="New Project"/>
+  </section>
+  <section name="data">
+    <explorer view="..\..\sdl2\" pattern="0"/>
+    <log show="1"/>
+    <lastopen date="2020-10-26 10:25" user="GPI" host="DESKTOP-8KUBNJH"/>
+  </section>
+  <section name="files">
+    <file name="..\class.pbi">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
+      <fingerprint md5="a7dfe2c9c98d080abd9f51f45be95316"/>
+    </file>
+    <file name="..\gui.pbi">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
+      <fingerprint md5="564ab7e9f70de8637b06a86ab4cb4e98"/>
+    </file>
+    <file name="gadgets.pbi">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
+      <fingerprint md5="16bbd093a7841159ccd9fd2b24aa6d58"/>
+    </file>
+    <file name="GUI-Demo.pb">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
+      <fingerprint md5="6e69adca0f5543342652af9c5341594e"/>
+    </file>
+    <file name="..\renderer.pbi">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
+      <fingerprint md5="ee7634cd2f77f3e0885e8d4179839833"/>
+    </file>
+    <file name="..\..\sdl2\SDL.pbi">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
+      <fingerprint md5="0a1d25288c2d827afe0a0f46f75a54f7"/>
+    </file>
+  </section>
+  <section name="targets">
+    <target name="Default Target" enabled="1" default="1">
+      <inputfile value="GUI-Demo.pb"/>
+      <outputfile value=""/>
+      <options xpskin="1" debug="1"/>
+    </target>
+  </section>
+</project>

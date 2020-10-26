@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Gui>
+	<Frame Name="Frame1" Template="OutsideFrame">
+		<Anchor>
+			<Left>30</Left>
+			<Top>30</Top>
+			<Right>100</Right>
+			<Bottom>100</Bottom>
+		</Anchor>
+		
+		<Bound MinWidth="50" MaxWidth="120" MinHeight="50" MaxHeight="120" />
+		
+		<Frame Name="Frame2" Template="OutsideFrame">
+			<Anchor>
+				<Left>-10</Left>
+				<Top>20</Top>
+				<Right>150</Right>
+				<Bottom>30</Bottom>
+			</Anchor>
+		</Frame>
+		
+		<UserData>
+			<Moveable>1</Moveable>
+			<Sizeable>1</Sizeable>			
+		</UserData>
+		<Bind>
+			<UserAction>Frame1_OnClick()</UserAction>
+		</Bind>
+	</Frame>
+	
+	<Frame Name="Frame3" Template="OutsideFrame">
+		<Anchor>
+			<Left>50</Left>
+			<Top>50</Top>
+			<Right>50 MaxSize .</Right>
+			<Bottom>5 MaxSize .</Bottom>
+		</Anchor>		
+		<Frame Name="Text" Style="Background">
+			<TextureText Font="Default" Color="#ff00FF">Frame3</TextureText>
+			<Anchor>
+				<Left>0 Center ..</Left>
+				<Top>0</Top>
+				<Right>TextureSize</Right>
+				<Bottom>TextureSize</Bottom>
+			</Anchor>
+		</Frame>
+		<Frame Name="btn1" Template="Button">
+			<Anchor>
+				<Left>0 Center ..</Left>
+				<Top>10</Top>
+			</Anchor>
+			<UserData>
+				<Text>Hide</Text>
+			</UserData>
+			<Bind>
+				<UserAction>Button1_OnClick()</UserAction>
+			</Bind>
+		</Frame>
+		<Frame Name="btn2" Template="Button">
+			<Anchor>
+				<Left>0 Center ..</Left>
+				<Top>2 Bottom ..btn1</Top>
+			</Anchor>
+			<UserData>
+				<Text>Button2</Text>
+			</UserData>
+			<Bind>
+				<UserAction>Button_OnClick()</UserAction>
+			</Bind>
+		</Frame>
+		<Frame Name="btn3" State="Disabled" Template="Button">
+			<Anchor>
+				<Left>0 Center ..</Left>
+				<Top>2 Bottom ..btn2</Top>
+			</Anchor>
+			<UserData>
+				<Text>Quit</Text>
+			</UserData>
+			<Bind>
+				<UserAction>Button_OnClick()</UserAction>
+			</Bind>
+		</Frame>
+		<UserData>
+			<Moveable>1</Moveable>
+		</UserData>	
+		
+		<Frame Name="Volume" Template="SliderHorizontal">
+			<Anchor>
+				<Left>0 Center ..</Left>
+				<Top>2 Bottom ..btn3</Top>
+				<Right>116</Right>
+				<Bottom>16</Bottom>
+			</Anchor>
+			<UserData>
+				<Value>0.25</Value>
+			</UserData>
+			<Bind>
+				<UserAction>Slider_OnClick()</UserAction>
+			</Bind>
+		</Frame>
+		
+		<Frame Name="Sound" Template="SliderVertical">
+			<Anchor>
+				<X>5</X>
+				<Y>10</Y>
+				<W>16</W>
+				<H>66</H>
+			</Anchor>
+			<UserData>
+				<Value>0.25</Value>
+			</UserData>
+			<Bind>
+				<UserAction>Slider_OnClick()</UserAction>
+			</Bind>
+		</Frame>
+		
+		<Frame Name="ChBox" Template="Checkbox">
+			<Anchor>
+				<X>10</X>
+				<Y>2 Bottom ..Volume</Y>			
+			</Anchor>
+		</Frame>
+	
+	</Frame>
+</Gui>

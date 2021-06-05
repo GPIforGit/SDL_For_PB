@@ -1,0 +1,61 @@
+
+Directorys:
+	include.c
+		original c header files. 
+		
+	libSDL2_PB_HelperLib.c
+		sourcecode of the "libSDL2_OB_HelperLib.a"
+			
+	sdl2
+		libSDL2_PB_HelperLib.a
+			translate some c functions call, that pb doesn't support
+		SDL.pbi
+			main-SDL-file
+		SDL_image.pbi
+			add SDL_image-Support, include before SDL.pbi
+		SDL_mixer
+			add SDL_mixer-Support, include before SDL.pbi
+		SDL_net
+			add SDL_net-Support, include before SDL.pbi
+		SDL_ttf
+			add SDL_ttf-Support, include before SDL.pbi
+		SDL2*.lib
+			Libs for SDL2
+		
+	Tutorial
+		contains help files for "Lazy Foo' Production SDL-Tutorial", see readme.txt
+
+	
+	
+
+required DLL:
+
+	SDL:
+		SDL2.dll
+
+	SDL_image:
+		SDL2_image.dll
+		libjpeg-9.dll
+		libpng16-16.dll
+		libtiff-5.dll
+		libwebp-7.dll
+		zlib1.dll
+
+	SDL_mixer:
+		SDL2_mixer.dll
+		libFLAC-8.dll
+		libmodplug-1.dll
+		libmpg123-0.dll
+		libogg-0.dll
+		libopus-0.dll
+		libopusfile-0.dll
+		libvorbis-0.dll
+		libvorbisfile-3.dll
+
+	SDL_net:
+		SDL2_net.dll
+
+	SDL_ttf:
+		SDL2_ttf.dll
+		libfreetype-6.dll
+		zlib1.dll
